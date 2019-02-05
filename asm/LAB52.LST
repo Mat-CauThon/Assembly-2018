@@ -1,0 +1,732 @@
+Turbo Assembler	 Version 4.0	    02/12/18 17:36:21	    Page 1
+lab52.asm
+
+
+
+      1				     input MACRO
+      2				      mov ah,0Ah	      ;Функция DOS 0Ah -	ввод строки в буфер
+      3
+      4					 lea dx,userNumber	     ;DX = aдрес буфера
+      5					 int 21h		 ;Обращение к	функции DOS
+      6					 mov al,[userNumber+1]	     ;AL = длина введённой строки
+      7					 add dx,2		 ;DX = адрес строки
+      8
+      9				     ENDM
+     10
+     11				     convert MACRO
+     12					     test al,al	   ;Проверка длины	строки
+     13					 jz errorMost			 ;Если равно 0, возвращаем ошибку
+     14					 mov bx, offset	dx	     ;BX = адрес строки
+     15					 mov bl,[bx]		 ;BL = первый символ строки
+     16					 cmp bl,'-'		 ;Сравнение первого символа с '-'
+     17					 jne stsdw_no_sign	 ;Если не	равно, то преобразуем	как	    +
+     18				     число	без знака
+     19					 inc dx			 ;Инкремент адреса строки
+     20					 dec al			 ;Декремент длины	строки
+     21					 stsdw_no_sign:
+     22					 call number_module   ;Преобразуем строку в слово без	знака
+     23					     jc	errorMost
+     24					 cmp bl,'-'		 ;Снова проверяем	знак
+     25					 jne stsdw_plus		 ;Если первый	символ не '-', то число	    +
+     26				     положительное
+     27					 cmp ax,32768		 ;Модуль отрицательного числа должен +
+     28				     быть не больше	32768
+     29					 ja errorMost			     ;Если больше (без знака),	    +
+     30				     возвращаем ошибку
+     31					 neg ax			 ;Инвертируем число
+     32					 jmp stsdw_ok		 ;Переход к нормальному завершению	    +
+     33				     процедуры
+     34					 stsdw_plus:
+     35					 cmp ax,32767		 ;Положительное число	должно быть не  +
+     36				     больше 32767
+     37					 ja errorMost			 ;Если больше	(без	знака),		    +
+     38				     возвращаем ошибку
+     39					 stsdw_ok:
+     40					 clc			 ;CF = 0
+     41
+     42				     ENDM
+     43
+     44
+     45
+     46				     divid MACRO where_save
+     47				     LOCAL ok
+     48
+     49						     ;inc si
+     50						     mov ax,dx
+     51
+     52						     mul ten
+     53						     mov bx,ax
+     54
+     55						     ;cmp ax,di	     ;;	!!!!!!
+     56
+     57						     cwd
+Turbo Assembler	 Version 4.0	    02/12/18 17:36:21	    Page 2
+lab52.asm
+
+
+
+     58						     div di
+     59
+     60						     cmp ax,0
+     61						     jge ok
+     62
+     63						     xor ax,ax
+     64
+     65						     ok:
+     66						     call write
+     67						     mov ax,bx
+     68
+     69						     mov where_save, ax
+     70
+     71				     ENDM
+     72
+     73				     write_mes MACRO what_write
+     74
+     75					     lea dx, what_write
+     76					     mov ah,9
+     77					     int 21h
+     78
+     79				     ENDM
+     80
+     81
+     82	0000			     STSEG SEGMENT PARA	STACK "STACK"
+     83	0000  80*(53 54	41 43 4B)    DB	128 DUP	( "STACK" )
+     84	0280			     STSEG ENDS
+     85
+     86
+     87
+     88	0000			     DSEG SEGMENT PARA PUBLIC "DATA"
+     89
+     90	0000  07 ?? 05*(3F)	     userNumber	DB 7,?,5 dup('?')    ;Запись максимальной длины в	    +
+     91				     первый байт буфера	и обнуление второго байта		    +
+     92				     (фактической длины)
+     93	0007  45 52 52 4F 52 20	24   error_test	DB 'ERROR $'
+     94	000E  45 52 52 4F 52 2C	20+  error_big DB 'ERROR, Your number not a mezha $'
+     95	      59 6F 75 72 20 6E	75+
+     96	      6D 62 65 72 20 6E	6F+
+     97	      74 20 61 20 6D 65	7A+
+     98	      68 61 20 24
+     99	002E  0A 0D 59 6F 75 72	20+  your_num DB 10,13,'Your function Z	is -> $'
+    100	      66 75 6E 63 74 69	6F+
+    101	      6E 20 5A 20 69 73	20+
+    102	      2D 3E 20 24
+    103	0047  0A 0D 57 72 69 74	65+  write_num DB 10,13,'Write your number x [-80,1646]	-> $'
+    104	      20 79 6F 75 72 20	6E+
+    105	      75 6D 62 65 72 20	78+
+    106	      20 5B 2D 38 30 2C	31+
+    107	      36 34 36 5D 20 2D	3E+
+    108	      20 24
+    109
+    110	006C  14		     twenty db 20
+    111	006D  0A		     ten db 10
+    112	006E  05		     five db 5
+    113	006F  03		     three db 3
+    114	0070  02		     two db 2
+Turbo Assembler	 Version 4.0	    02/12/18 17:36:21	    Page 3
+lab52.asm
+
+
+
+    115	0071  09		     nine db 9
+    116
+    117	0072  0000		     integ dw 0	     ; целая
+    118	0074  0000		     denth dw 0	     ; десятые
+    119	0076  0000		     hundr dw 0	     ; сотые
+    120	0078  0000		     thous dw 0	     ; тысячные
+    121	007A  0000		     dthou dw 0	     ; дес тысячных
+    122	007C  0000		     hthou dw 0	     ; сотни тысячных
+    123	007E  0000		     milli dw 0	     ; милионная часть числа
+    124
+    125	0080  0D 0A 20		     stroka db 13, 10, ' '
+    126
+    127
+    128
+    129	0083			     DSEG ENDS
+    130
+    131	0000			     CSEG SEGMENT PARA PUBLIC "CODE"
+    132
+    133
+    134
+    135
+    136
+    137	0000			     MAIN PROC FAR
+    138				     ASSUME CS:	CSEG, DS: DSEG,	SS: STSEG
+    139				     ; адреса повернення
+    140	0000  1E			     PUSH DS
+    141	0001  33 C0			     XOR AX, AX
+    142	0003  50			     PUSH AX
+    143
+    144	0004  B8 0000s			     MOV AX, DSEG
+    145	0007  8E D8			     MOV DS, AX
+    146
+    147
+    148
+    149				     ;;;;;
+    150					     write_mes write_num
+1   151	0009  BA 0047r			     lea dx, write_num
+1   152	000C  B4 09			     mov ah,9
+1   153	000E  CD 21			     int 21h
+    154
+    155
+    156				     ;;;;;
+    157
+    158					     input
+1   159	0010  B4 0A		      mov ah,0Ah	      ;Функция DOS 0Ah -	ввод строки в буфер
+1   160	0012  BA 0000r			 lea dx,userNumber	     ;DX = aдрес буфера
+1   161	0015  CD 21			 int 21h		 ;Обращение к	функции DOS
+1   162	0017  A0 0001r			 mov al,[userNumber+1]	     ;AL = длина введённой строки
+1   163	001A  83 C2 02			 add dx,2		 ;DX = адрес строки
+    164
+    165				     ;;;;;
+    166
+    167					     convert
+1   168	001D  84 C0			     test al,al	   ;Проверка длины	строки
+1   169	001F  74 5F			 jz errorMost			 ;Если равно 0, возвращаем ошибку
+1   170	0021  8B DA			 mov bx, offset	dx	     ;BX = адрес строки
+1   171	0023  8A 1F			 mov bl,[bx]		 ;BL = первый символ строки
+Turbo Assembler	 Version 4.0	    02/12/18 17:36:21	    Page 4
+lab52.asm
+
+
+
+1   172	0025  80 FB 2D			 cmp bl,'-'		 ;Сравнение первого символа с '-'
+1   173	0028  75 03			 jne stsdw_no_sign	 ;Если не	равно, то преобразуем	как	    +
+    174				     число	без знака
+1   175	002A  42			 inc dx			 ;Инкремент адреса строки
+1   176	002B  FE C8			 dec al			 ;Декремент длины	строки
+1   177	002D				 stsdw_no_sign:
+1   178	002D  E8 021E			 call number_module   ;Преобразуем строку в слово без	знака
+1   179	0030  72 4E			     jc	errorMost
+1   180	0032  80 FB 2D			 cmp bl,'-'		 ;Снова проверяем	знак
+1   181	0035  75 0A			 jne stsdw_plus		 ;Если первый	символ не '-', то число	    +
+    182				     положительное
+1   183	0037  3D 8000			 cmp ax,32768		 ;Модуль отрицательного числа должен +
+    184				     быть не больше	32768
+1   185	003A  77 44			 ja errorMost			     ;Если больше (без знака),	    +
+    186				     возвращаем ошибку
+1   187	003C  F7 D8			 neg ax			 ;Инвертируем число
+1   188	003E  EB 06 90			 jmp stsdw_ok		 ;Переход к нормальному завершению	    +
+    189				     процедуры
+1   190	0041				 stsdw_plus:
+1   191	0041  3D 7FFF			 cmp ax,32767		 ;Положительное число	должно быть не  +
+    192				     больше 32767
+1   193	0044  77 3A			 ja errorMost			 ;Если больше	(без	знака),		    +
+    194				     возвращаем ошибку
+1   195	0046				 stsdw_ok:
+1   196	0046  F8			 clc			 ;CF = 0
+    197
+    198
+    199	0047  8B D8			     mov bx, ax
+    200
+    201						     write_mes your_num
+1   202	0049  BA 002Er			     lea dx, your_num
+1   203	004C  B4 09			     mov ah,9
+1   204	004E  CD 21			     int 21h
+    205
+    206	0050  8B C3			     mov ax,bx
+    207
+    208	0052  3D 0000			     cmp ax,0
+    209	0055  7E 2F			     jle second1 ;number <= 0
+    210	0057				     first:
+    211
+    212	0057  33 D2			     xor dx,dx
+    213	0059  33 F6			     xor si,si
+    214	005B  33 FF			     xor di,di
+    215	005D  8B D8			     mov bx,ax			     ;save x
+    216
+    217	005F  F7 E3			     mul bx			     ; ax = x^2
+    218	0061  F6 26 006Fr		     mul three
+    219	0065  8B F0			     mov si,ax			     ; si = x^2
+    220
+    221
+    222
+    223	0067  8B C3			     mov ax,bx			     ; ax = x
+    224	0069  F6 26 0071r		     mul nine			     ; ax = 3x
+    225
+    226	006D  03 C6			     add ax,si			     ; ax = x^2	+ 3x
+    227	006F  05 0006			     add ax,6			     ; ax = x^2+3x+2
+    228
+Turbo Assembler	 Version 4.0	    02/12/18 17:36:21	    Page 5
+lab52.asm
+
+
+
+    229	0072  8B F8			     mov di,ax			     ; di = x^2+3x+2
+    230	0074  8B C3			     mov ax,bx			     ; ax = x
+    231	0076  F6 26 006Cr		     mul twenty			     ; ax = 20x
+    232	007A  05 0019			     add ax,25			     ; ax = 20x+35
+    233
+    234
+    235
+    236
+    237
+    238	007D  EB 0A 90			     jmp continue
+    239	0080				     errorMost:
+    240	0080  E9 0187			     jmp error
+    241	0083				     prebigerror:
+    242	0083  E9 0193			     jmp errorBig
+    243	0086				     second1:
+    244	0086  E9 00AC			     jmp second
+    245	0089				     continue:
+    246
+    247	0089  99			     cwd
+    248	008A  F7 F7			     div di
+    249	008C  E8 0197			     call write
+    250
+    251	008F  A3 0072r			     mov integ,	ax
+    252
+    253	0092  B0 2C				     mov al,','
+    254	0094  CD 29				     int 29h
+    255
+    256
+    257
+    258
+    259					     divid denth
+1   260	0096  8B C2				     mov ax,dx
+1   261	0098  F6 26 006Dr			     mul ten
+1   262	009C  8B D8				     mov bx,ax
+1   263	009E  99				     cwd
+1   264	009F  F7 F7				     div di
+1   265	00A1  3D 0000				     cmp ax,0
+1   266	00A4  7D 02				     jge ??0000
+1   267	00A6  33 C0				     xor ax,ax
+1   268	00A8					     ??0000:
+1   269	00A8  E8 017B				     call write
+1   270	00AB  8B C3				     mov ax,bx
+1   271	00AD  A3 0074r				     mov denth,	ax
+    272					     divid thous
+1   273	00B0  8B C2				     mov ax,dx
+1   274	00B2  F6 26 006Dr			     mul ten
+1   275	00B6  8B D8				     mov bx,ax
+1   276	00B8  99				     cwd
+1   277	00B9  F7 F7				     div di
+1   278	00BB  3D 0000				     cmp ax,0
+1   279	00BE  7D 02				     jge ??0001
+1   280	00C0  33 C0				     xor ax,ax
+1   281	00C2					     ??0001:
+1   282	00C2  E8 0161				     call write
+1   283	00C5  8B C3				     mov ax,bx
+1   284	00C7  A3 0078r				     mov thous,	ax
+    285					     divid thous
+Turbo Assembler	 Version 4.0	    02/12/18 17:36:21	    Page 6
+lab52.asm
+
+
+
+1   286	00CA  8B C2				     mov ax,dx
+1   287	00CC  F6 26 006Dr			     mul ten
+1   288	00D0  8B D8				     mov bx,ax
+1   289	00D2  99				     cwd
+1   290	00D3  F7 F7				     div di
+1   291	00D5  3D 0000				     cmp ax,0
+1   292	00D8  7D 02				     jge ??0002
+1   293	00DA  33 C0				     xor ax,ax
+1   294	00DC					     ??0002:
+1   295	00DC  E8 0147				     call write
+1   296	00DF  8B C3				     mov ax,bx
+1   297	00E1  A3 0078r				     mov thous,	ax
+    298					     divid dthou
+1   299	00E4  8B C2				     mov ax,dx
+1   300	00E6  F6 26 006Dr			     mul ten
+1   301	00EA  8B D8				     mov bx,ax
+1   302	00EC  99				     cwd
+1   303	00ED  F7 F7				     div di
+1   304	00EF  3D 0000				     cmp ax,0
+1   305	00F2  7D 02				     jge ??0003
+1   306	00F4  33 C0				     xor ax,ax
+1   307	00F6					     ??0003:
+1   308	00F6  E8 012D				     call write
+1   309	00F9  8B C3				     mov ax,bx
+1   310	00FB  A3 007Ar				     mov dthou,	ax
+    311					     divid hthou
+1   312	00FE  8B C2				     mov ax,dx
+1   313	0100  F6 26 006Dr			     mul ten
+1   314	0104  8B D8				     mov bx,ax
+1   315	0106  99				     cwd
+1   316	0107  F7 F7				     div di
+1   317	0109  3D 0000				     cmp ax,0
+1   318	010C  7D 02				     jge ??0004
+1   319	010E  33 C0				     xor ax,ax
+1   320	0110					     ??0004:
+1   321	0110  E8 0113				     call write
+1   322	0113  8B C3				     mov ax,bx
+1   323	0115  A3 007Cr				     mov hthou,	ax
+    324					     divid milli
+1   325	0118  8B C2				     mov ax,dx
+1   326	011A  F6 26 006Dr			     mul ten
+1   327	011E  8B D8				     mov bx,ax
+1   328	0120  99				     cwd
+1   329	0121  F7 F7				     div di
+1   330	0123  3D 0000				     cmp ax,0
+1   331	0126  7D 02				     jge ??0005
+1   332	0128  33 C0				     xor ax,ax
+1   333	012A					     ??0005:
+1   334	012A  E8 00F9				     call write
+1   335	012D  8B C3				     mov ax,bx
+1   336	012F  A3 007Er				     mov milli,	ax
+    337
+    338
+    339
+    340
+    341
+    342	0132  E9 00F0			     jmp return_zero
+Turbo Assembler	 Version 4.0	    02/12/18 17:36:21	    Page 7
+lab52.asm
+
+
+
+    343
+    344	0135				     second:
+    345	0135  3D 0000				     cmp ax,0
+    346	0138  7C 07				     jl	minus
+    347	013A  B0 35				     mov al, '5'
+    348	013C  CD 29				     int 29h
+    349	013E  E9 00E4				     jmp return_zero
+    350
+    351	0141				     minus:
+    352
+    353	0141  50				     push ax
+    354	0142  B0 2D				     mov al, '-'
+    355	0144  CD 29				     int 29h
+    356	0146  58				     pop ax
+    357
+    358	0147  F7 D8				     neg ax  ;;
+    359
+    360	0149  33 D2				     xor dx,dx
+    361	014B  33 F6				     xor si,si
+    362	014D  33 FF				     xor di,di
+    363	014F  8B D8				     mov bx,ax			     ;save x
+    364
+    365
+    366	0151  05 0001				     add ax,1
+    367	0154  8B F8				     mov di,ax			     ; si = 1 -	x
+    368
+    369	0156  8B C3				     mov ax,bx			     ; ax = x
+    370						     ;neg ax
+    371	0158  F6 26 006Er			     mul five			     ; ax = 5x
+    372	015C  F7 E3				     mul bx			     ; ax = 5x^2
+    373
+    374						     ;mov di,ax			     ; di = 5x^2
+    375
+    376
+    377	015E  99				     cwd
+    378	015F  F7 F7				     div di
+    379
+    380	0161  E8 00C2			     call write
+    381					     ;integend:
+    382	0164  A3 0072r			     mov integ,	ax
+    383
+    384	0167  B0 2C				     mov al,','
+    385	0169  CD 29				     int 29h
+    386
+    387					     divid denth
+1   388	016B  8B C2				     mov ax,dx
+1   389	016D  F6 26 006Dr			     mul ten
+1   390	0171  8B D8				     mov bx,ax
+1   391	0173  99				     cwd
+1   392	0174  F7 F7				     div di
+1   393	0176  3D 0000				     cmp ax,0
+1   394	0179  7D 02				     jge ??0006
+1   395	017B  33 C0				     xor ax,ax
+1   396	017D					     ??0006:
+1   397	017D  E8 00A6				     call write
+1   398	0180  8B C3				     mov ax,bx
+1   399	0182  A3 0074r				     mov denth,	ax
+Turbo Assembler	 Version 4.0	    02/12/18 17:36:21	    Page 8
+lab52.asm
+
+
+
+    400					     divid thous
+1   401	0185  8B C2				     mov ax,dx
+1   402	0187  F6 26 006Dr			     mul ten
+1   403	018B  8B D8				     mov bx,ax
+1   404	018D  99				     cwd
+1   405	018E  F7 F7				     div di
+1   406	0190  3D 0000				     cmp ax,0
+1   407	0193  7D 02				     jge ??0007
+1   408	0195  33 C0				     xor ax,ax
+1   409	0197					     ??0007:
+1   410	0197  E8 008C				     call write
+1   411	019A  8B C3				     mov ax,bx
+1   412	019C  A3 0078r				     mov thous,	ax
+    413					     divid thous
+1   414	019F  8B C2				     mov ax,dx
+1   415	01A1  F6 26 006Dr			     mul ten
+1   416	01A5  8B D8				     mov bx,ax
+1   417	01A7  99				     cwd
+1   418	01A8  F7 F7				     div di
+1   419	01AA  3D 0000				     cmp ax,0
+1   420	01AD  7D 02				     jge ??0008
+1   421	01AF  33 C0				     xor ax,ax
+1   422	01B1					     ??0008:
+1   423	01B1  E8 0072				     call write
+1   424	01B4  8B C3				     mov ax,bx
+1   425	01B6  A3 0078r				     mov thous,	ax
+    426					     divid dthou
+1   427	01B9  8B C2				     mov ax,dx
+1   428	01BB  F6 26 006Dr			     mul ten
+1   429	01BF  8B D8				     mov bx,ax
+1   430	01C1  99				     cwd
+1   431	01C2  F7 F7				     div di
+1   432	01C4  3D 0000				     cmp ax,0
+1   433	01C7  7D 02				     jge ??0009
+1   434	01C9  33 C0				     xor ax,ax
+1   435	01CB					     ??0009:
+1   436	01CB  E8 0058				     call write
+1   437	01CE  8B C3				     mov ax,bx
+1   438	01D0  A3 007Ar				     mov dthou,	ax
+    439					     divid hthou
+1   440	01D3  8B C2				     mov ax,dx
+1   441	01D5  F6 26 006Dr			     mul ten
+1   442	01D9  8B D8				     mov bx,ax
+1   443	01DB  99				     cwd
+1   444	01DC  F7 F7				     div di
+1   445	01DE  3D 0000				     cmp ax,0
+1   446	01E1  7D 02				     jge ??000A
+1   447	01E3  33 C0				     xor ax,ax
+1   448	01E5					     ??000A:
+1   449	01E5  E8 003E				     call write
+1   450	01E8  8B C3				     mov ax,bx
+1   451	01EA  A3 007Cr				     mov hthou,	ax
+    452					     divid milli
+1   453	01ED  8B C2				     mov ax,dx
+1   454	01EF  F6 26 006Dr			     mul ten
+1   455	01F3  8B D8				     mov bx,ax
+1   456	01F5  99				     cwd
+Turbo Assembler	 Version 4.0	    02/12/18 17:36:21	    Page 9
+lab52.asm
+
+
+
+1   457	01F6  F7 F7				     div di
+1   458	01F8  3D 0000				     cmp ax,0
+1   459	01FB  7D 02				     jge ??000B
+1   460	01FD  33 C0				     xor ax,ax
+1   461	01FF					     ??000B:
+1   462	01FF  E8 0024				     call write
+1   463	0202  8B C3				     mov ax,bx
+1   464	0204  A3 007Er				     mov milli,	ax
+    465
+    466
+    467
+    468	0207  EB 1C 90			     jmp return_zero
+    469
+    470
+    471
+    472
+    473	020A				     error:
+    474	020A  B8 0003				     mov ax,03	     ;;	 очистка	экрана
+    475	020D  CD 10				     int 10h	     ;;
+    476
+    477
+    478						     write_mes error_test
+1   479	020F  BA 0007r			     lea dx, error_test
+1   480	0212  B4 09			     mov ah,9
+1   481	0214  CD 21			     int 21h
+    482	0216  EB 0D 90				     jmp return_zero
+    483
+    484	0219				     errorBig:
+    485	0219  B8 0003				     mov ax,03	     ;;	 очистка	экрана
+    486	021C  CD 10				     int 10h	     ;;
+    487
+    488						     write_mes error_big
+1   489	021E  BA 000Er			     lea dx, error_big
+1   490	0221  B4 09			     mov ah,9
+1   491	0223  CD 21			     int 21h
+    492
+    493
+    494
+    495	0225			      return_zero:
+    496
+    497
+    498	0225  CB		     RET
+    499
+    500	0226			     MAIN ENDP
+    501
+    502
+    503	0226			     write PROC
+    504
+    505	0226  52			     push dx
+    506
+    507	0227  8B D8			     mov bx,ax
+    508	0229  0B DB			     or	bx, bx
+    509	022B  79 06			     jns m1
+    510	022D  B0 2D			     mov al, '-'
+    511	022F  CD 29			     int 29h
+    512	0231  F7 DB			     neg bx
+    513	0233				     m1:
+Turbo Assembler	 Version 4.0	    02/12/18 17:36:21	    Page 10
+lab52.asm
+
+
+
+    514	0233  8B C3			     mov ax, bx
+    515	0235  33 C9			     xor cx, cx
+    516	0237  BB 000A			     mov bx, 10
+    517	023A				     m2:
+    518	023A  33 D2			     xor dx, dx
+    519	023C  F7 F3			     div bx
+    520	023E  80 C2 30			     add dl, '0'
+    521	0241  52			     push dx
+    522	0242  41			     inc cx
+    523	0243  85 C0			     test ax, ax
+    524	0245  75 F3			     jnz m2
+    525	0247				     m3:
+    526	0247  58			     pop ax
+    527	0248  CD 29			     int 29h
+    528	024A  E2 FB			     loop m3
+    529
+    530	024C  5A			     pop dx
+    531	024D  C3			     ret
+    532	024E			     write ENDP
+    533
+    534
+    535	024E			     number_module PROC
+    536	024E  51			 push cx		 ;Сохранение всех	используемых	    +
+    537				     регистров
+    538	024F  52			 push dx
+    539	0250  53			 push bx
+    540	0251  56			 push si
+    541	0252  57			 push di
+    542
+    543	0253  8B F2			 mov si, offset	dx	 ;SI = адрес строки
+    544	0255  BF 000A			 mov di,10		 ;DI = множитель 10 (основание системы	    +
+    545				     счисления)
+    546
+    547					     ;movcs cx,al не работает, спросить почему!
+    548	0258  33 C9			     xor cx,cx
+    549	025A  8A C8			     mov cl,al
+    550
+    551	025C  33 C0			 xor ax,ax		 ;AX = 0
+    552	025E  33 DB			 xor bx,bx		 ;BX = 0
+    553
+    554	0260			     studw_lp:
+    555	0260  8A 1C			 mov bl,[si]		 ;Загрузка в BL очередного символа	    +
+    556				     строки
+    557	0262  46			 inc si			 ;Инкремент адреса
+    558	0263  80 FB 30			 cmp bl,'0'		 ;Если код символа меньше кода '0'
+    559	0266  72 15			 jb studw_error		 ; возвращаем	ошибку
+    560	0268  80 FB 39			 cmp bl,'9'		 ;Если код символа больше кода '9'
+    561	026B  77 10			 ja studw_error		 ; возвращаем	ошибку
+    562	026D  80 EB 30			 sub bl,'0'		 ;Преобразование символа-цифры в	    +
+    563				     число
+    564	0270  F7 E7			 mul di			 ;AX = AX * 10
+    565	0272  72 09			 jc studw_error		 ;Если результат больше 16 бит - ошибка
+    566	0274  03 C3			 add ax,bx		 ;Прибавляем цифру
+    567	0276  72 05			 jc studw_error		 ;Если переполнение - ошибка
+    568	0278  E2 E6			 loop studw_lp		 ;Команда цикла
+    569	027A  EB 04 90			 jmp studw_exit		 ;Успешное завершение	(здесь всегда CF +
+    570				     = 0)
+Turbo Assembler	 Version 4.0	    02/12/18 17:36:21	    Page 11
+lab52.asm
+
+
+
+    571
+    572	027D			     studw_error:
+    573	027D  33 C0			 xor ax,ax		 ;AX = 0
+    574	027F  F9			 stc			 ;CF = 1 (Возвращаем ошибку)
+    575
+    576	0280			     studw_exit:
+    577	0280  5F			 pop di			 ;Восстановление регистров
+    578	0281  5E			 pop si
+    579	0282  5B			 pop bx
+    580	0283  5A			 pop dx
+    581	0284  59			 pop cx
+    582	0285  C3			 ret
+    583	0286			     number_module ENDP
+    584
+    585
+    586
+    587
+    588	0286			     CSEG ENDS
+    589				     END MAIN
+Turbo Assembler	 Version 4.0	    02/12/18 17:36:21	    Page 12
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??0000				  Near	 CSEG:00A8
+??0001				  Near	 CSEG:00C2
+??0002				  Near	 CSEG:00DC
+??0003				  Near	 CSEG:00F6
+??0004				  Near	 CSEG:0110
+??0005				  Near	 CSEG:012A
+??0006				  Near	 CSEG:017D
+??0007				  Near	 CSEG:0197
+??0008				  Near	 CSEG:01B1
+??0009				  Near	 CSEG:01CB
+??000A				  Near	 CSEG:01E5
+??000B				  Near	 CSEG:01FF
+??DATE				  Text	 "02/12/18"
+??FILENAME			  Text	 "lab52	  "
+??TIME				  Text	 "17:36:21"
+??VERSION			  Number 0400
+@CPU				  Text	 0101H
+@CURSEG				  Text	 CSEG
+@FILENAME			  Text	 LAB52
+@WORDSIZE			  Text	 2
+CONTINUE			  Near	 CSEG:0089
+DENTH				  Word	 DSEG:0074
+DTHOU				  Word	 DSEG:007A
+ERROR				  Near	 CSEG:020A
+ERRORBIG			  Near	 CSEG:0219
+ERRORMOST			  Near	 CSEG:0080
+ERROR_BIG			  Byte	 DSEG:000E
+ERROR_TEST			  Byte	 DSEG:0007
+FIRST				  Near	 CSEG:0057
+FIVE				  Byte	 DSEG:006E
+HTHOU				  Word	 DSEG:007C
+HUNDR				  Word	 DSEG:0076
+INTEG				  Word	 DSEG:0072
+M1				  Near	 CSEG:0233
+M2				  Near	 CSEG:023A
+M3				  Near	 CSEG:0247
+MAIN				  Far	 CSEG:0000
+MILLI				  Word	 DSEG:007E
+MINUS				  Near	 CSEG:0141
+NINE				  Byte	 DSEG:0071
+NUMBER_MODULE			  Near	 CSEG:024E
+PREBIGERROR			  Near	 CSEG:0083
+RETURN_ZERO			  Near	 CSEG:0225
+SECOND				  Near	 CSEG:0135
+SECOND1				  Near	 CSEG:0086
+STROKA				  Byte	 DSEG:0080
+STSDW_NO_SIGN			  Near	 CSEG:002D
+STSDW_OK			  Near	 CSEG:0046
+STSDW_PLUS			  Near	 CSEG:0041
+STUDW_ERROR			  Near	 CSEG:027D
+STUDW_EXIT			  Near	 CSEG:0280
+STUDW_LP			  Near	 CSEG:0260
+TEN				  Byte	 DSEG:006D
+THOUS				  Word	 DSEG:0078
+Turbo Assembler	 Version 4.0	    02/12/18 17:36:21	    Page 13
+Symbol Table
+
+
+
+THREE				  Byte	 DSEG:006F
+TWENTY				  Byte	 DSEG:006C
+TWO				  Byte	 DSEG:0070
+USERNUMBER			  Byte	 DSEG:0000
+WRITE				  Near	 CSEG:0226
+WRITE_NUM			  Byte	 DSEG:0047
+YOUR_NUM			  Byte	 DSEG:002E
+
+Macro Name
+
+CONVERT
+DIVID
+INPUT
+WRITE_MES
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+CSEG				  16  0286 Para	  Public  CODE
+DSEG				  16  0083 Para	  Public  DATA
+STSEG				  16  0280 Para	  Stack	  STACK
+

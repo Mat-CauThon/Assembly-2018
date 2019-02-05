@@ -1,0 +1,201 @@
+Turbo Assembler	 Version 4.0	    23/10/18 22:00:19	    Page 1
+lab2.asm
+
+
+
+      1	0000			     ﻿STSEG SEGMENT PARA STACK "STACK"
+      2	0000  40*(53 54	41 43 4B)    DB	64 DUP ( "STACK" )
+      3	0140			     STSEG ENDS
+      4
+      5
+      6
+      7	0000			     DSEG SEGMENT PARA PUBLIC "DATA"
+      8	0000  54 65 73 74 20 31	24   MAS DB 'Test 1$'
+      9	0007  45 52 52 4F 52 20	4E+  MASERROR DB 'ERROR	NOT A SYMBOL$'
+     10	      4F 54 20 41 20 53	59+
+     11	      4D 42 4F 4C 24
+     12	001A  07 ?? 05*(3F)	     userNumber	DB 7,?,5 dup('?')
+     13
+     14	0021  45 52 52 4F 52 0A	24   error_test	DB 'ERROR',10,'$' ; СООБЩЕНИЕ О ОШИБКЕ С ПЕРЕВОДОМ	    +
+     15				     СТРОКИ
+     16
+     17
+     18
+     19	0028			     DSEG ENDS
+     20
+     21	0000			     CSEG SEGMENT PARA PUBLIC "CODE"
+     22
+     23
+     24
+     25
+     26	0000			     MAIN PROC FAR
+     27				     ASSUME CS:	CSEG, DS: DSEG,	SS: STSEG
+     28				     ; адреса повернення
+     29	0000  1E		       PUSH DS
+     30	0001  33 C0		       XOR AX, AX
+     31	0003  50		       PUSH AX
+     32
+     33	0004  B8 0000s		       MOV AX, DSEG
+     34	0007  8E D8		       MOV DS, AX
+     35
+     36
+     37
+     38				     ;;;;;
+     39
+     40	0009			     input_str:
+     41	0009  B0 07			     mov al,7
+     42	000B  8B C8			 mov cx,ax		 ;Сохранение AX в CX
+     43	000D  B4 0A			 mov ah,0Ah		 ;Функция DOS 0Ah - ввод строки в буфер
+     44					 ;mov [userNumber],al	      ;Запись максимальной длины	в	    +
+     45				     первый байт буфера
+     46	000F  C6 06 001Cr 00		 mov byte[userNumber+1],0    ;Обнуление второго	байта		    +
+     47				     (фактической длины)
+     48	0014  BA 001Ar			 lea dx,userNumber	     ;DX = aдрес буфера
+     49	0017  CD 21			 int 21h		 ;Обращение к	функции DOS
+     50	0019  A0 001Br			 mov al,[userNumber+1]	     ;AL = длина введённой строки
+     51	001C  83 C2 02			 add dx,2		 ;DX = адрес строки
+     52	001F  8A E5			 mov ah,ch		 ;Восстановление AH
+     53
+     54
+     55
+     56	0021  BF 0000			     mov di,0
+     57	0024  33 C9			     xor cx,cx
+Turbo Assembler	 Version 4.0	    23/10/18 22:00:19	    Page 2
+lab2.asm
+
+
+
+     58	0026  8A C8			     mov cl,al
+     59	0028  33 DB			     xor bx,bx		     ;BX = 0
+     60	002A			     symbol_testing:
+     61
+     62					     ;lea si,dx		      ;SI = адрес строки
+     63	002A  BE 000A			 mov si,10		 ;SI = множитель 10 (основание системы	    +
+     64				     счисления)
+     65	002D  33 C0			 xor ax,ax		 ;AX = 0
+     66
+     67	002F  BB 001Ar			     lea bx, userNumber
+     68
+     69
+     70
+     71	0032  8A 41 02			 mov al,[bx+di+2]	 ;Загрузка в AL очередного символа	    +
+     72				     строки
+     73	0035  47			 inc di			 ;Инкремент адреса
+     74	0036  3C 30			 cmp al,'0'		 ;Если код символа меньше кода '0'
+     75	0038  72 37			 jb symbol_test
+     76	003A  3C 39			 cmp al,'9'		 ;Если код символа больше кода '9'
+     77	003C  77 33			 ja symbol_test
+     78
+     79
+     80	003E  2D 0030			 sub ax,'0'		 ;Преобразование символа-цифры в	    +
+     81				     число
+     82	0041  F7 E6			 mul si			 ;AX = AX * 10
+     83	0043  72 41			 jc error			 ;Если результат больше 16 бит -	    +
+     84				     ошибка
+     85	0045  03 D8			 add bx,ax		 ;Прибавляем цифру
+     86	0047  72 3D			 jc error		 ;Если переполнение - ошибка
+     87	0049  E2 DF			 loop symbol_testing	       ;Команда цикла
+     88
+     89
+     90
+     91
+     92
+     93					     ;mov bx, num
+     94	004B  0B DB			     or	bx, bx
+     95	004D  79 06			     jns m1
+     96	004F  B0 2D			     mov al, '-'
+     97	0051  CD 29			     int 29h
+     98	0053  F7 DB			     neg bx
+     99	0055				     m1:
+    100	0055  8B C3			     mov ax, bx
+    101	0057  33 C9			     xor cx, cx
+    102	0059  BB 000A			     mov bx, 10
+    103	005C				     m2:
+    104	005C  33 D2			     xor dx, dx
+    105	005E  F7 F3			     div bx
+    106	0060  80 C2 30			     add dl, '0'
+    107	0063  52			     push dx
+    108	0064  41			     inc cx
+    109	0065  85 C0			     test ax, ax
+    110	0067  75 F3			     jnz m2
+    111	0069				     m3:
+    112	0069  58			     pop ax
+    113	006A  CD 29			     int 29h
+    114	006C  E2 FB			     loop m3
+Turbo Assembler	 Version 4.0	    23/10/18 22:00:19	    Page 3
+lab2.asm
+
+
+
+    115
+    116	006E  EB 1D 90			     jmp return_zero
+    117
+    118
+    119	0071			     symbol_test:
+    120
+    121	0071  3C 2D				     cmp al,'-'
+    122	0073  75 11				     jne  error
+    123
+    124	0075  0B FF				     or	di,di
+    125	0077  75 0D				     jnz error
+    126
+    127	0079  58				     pop ax
+    128	007A  50 55 8B EC C7 46	02+		     push 1
+    129	      0001 5D
+    130
+    131	0084  EB A4				     jmp symbol_testing
+    132
+    133
+    134
+    135	0086			       error:
+    136	0086  BA 0021r				     lea dx,error_test
+    137	0089  B4 09				     mov ah,9
+    138	008B  CD 21				     int 21h
+    139
+    140	008D			      return_zero:
+    141
+    142	008D  CB		     RET
+    143
+    144
+    145
+    146
+    147
+    148	008E			     MAIN ENDP
+    149	008E			     CSEG ENDS
+    150				     END MAIN
+Turbo Assembler	 Version 4.0	    23/10/18 22:00:19	    Page 4
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "23/10/18"
+??FILENAME			  Text	 "lab2	  "
+??TIME				  Text	 "22:00:19"
+??VERSION			  Number 0400
+@CPU				  Text	 0101H
+@CURSEG				  Text	 CSEG
+@FILENAME			  Text	 LAB2
+@WORDSIZE			  Text	 2
+ERROR				  Near	 CSEG:0086
+ERROR_TEST			  Byte	 DSEG:0021
+INPUT_STR			  Near	 CSEG:0009
+M1				  Near	 CSEG:0055
+M2				  Near	 CSEG:005C
+M3				  Near	 CSEG:0069
+MAIN				  Far	 CSEG:0000
+MAS				  Byte	 DSEG:0000
+MASERROR			  Byte	 DSEG:0007
+RETURN_ZERO			  Near	 CSEG:008D
+SYMBOL_TEST			  Near	 CSEG:0071
+SYMBOL_TESTING			  Near	 CSEG:002A
+USERNUMBER			  Byte	 DSEG:001A
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+CSEG				  16  008E Para	  Public  CODE
+DSEG				  16  0028 Para	  Public  DATA
+STSEG				  16  0140 Para	  Stack	  STACK
+

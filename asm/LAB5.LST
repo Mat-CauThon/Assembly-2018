@@ -1,0 +1,357 @@
+Turbo Assembler	 Version 4.0	    02/12/18 16:50:44	    Page 1
+lab5.asm
+
+
+
+      1
+      2				     output MACRO number
+      3
+      4					 mov bx, number
+      5					 or bx,	bx
+      6					     jns m1
+      7					     mov al, '-'
+      8					     int 29h
+      9					     neg bx
+     10					     m1:
+     11					     mov ax, bx
+     12					     xor cx, cx
+     13					     mov bx, 10
+     14					     m2:
+     15					     xor dx, dx
+     16					     div bx
+     17					     add dl, '0'
+     18					     push dx
+     19					     inc cx
+     20					     test ax, ax
+     21					     jnz m2
+     22					     m3:
+     23					     pop ax
+     24					     int 29h
+     25					     loop m3
+     26
+     27				     ENDM
+     28
+     29				     write_mes MACRO message
+     30
+     31					     lea dx, message
+     32					     mov ah,9
+     33					     int 21h
+     34
+     35				     ENDM
+     36
+     37				     convert MACRO
+     38				     test al,al	   ;Проверка длины	строки
+     39					 jz error		 ;Если равно 0, возвращаем ошибку
+     40					 mov bx, offset	dx	     ;BX = адрес строки
+     41					 mov bl,[bx]		 ;BL = первый символ строки
+     42					 cmp bl,'-'		 ;Сравнение первого символа с '-'
+     43					 jne stsdw_no_sign	 ;Если не	равно, то преобразуем	как	    +
+     44				     число	без знака
+     45					 inc dx			 ;Инкремент адреса строки
+     46					 dec al			 ;Декремент длины	строки
+     47					 stsdw_no_sign:
+     48					 call str_to_udec_word	 ;Преобразуем строку в слово без знака
+     49					     jc	error
+     50					 cmp bl,'-'		 ;Снова проверяем	знак
+     51					 jne stsdw_plus		 ;Если первый	символ не '-', то число	    +
+     52				     положительное
+     53					 cmp ax,32768		 ;Модуль отрицательного числа должен +
+     54				     быть не больше	32768
+     55					 ja error		     ;Если больше (без знака),		    +
+     56				     возвращаем ошибку
+     57					 neg ax			 ;Инвертируем число
+Turbo Assembler	 Version 4.0	    02/12/18 16:50:44	    Page 2
+lab5.asm
+
+
+
+     58					 jmp stsdw_ok		 ;Переход к нормальному завершению	    +
+     59				     процедуры
+     60					 stsdw_plus:
+     61					 cmp ax,32767		 ;Положительное число	должно быть не  +
+     62				     больше 32767
+     63					 ja error			 ;Если больше	(без	знака),		    +
+     64				     возвращаем ошибку
+     65					 stsdw_ok:
+     66					 clc			 ;CF = 0
+     67
+     68				     ENDM
+     69
+     70
+     71				     input MACRO
+     72				      mov ah,0Ah	      ;Функция DOS 0Ah -	ввод строки в буфер
+     73
+     74					 lea dx,userNumber	     ;DX = aдрес буфера
+     75					 int 21h		 ;Обращение к	функции DOS
+     76					 mov al,[userNumber+1]	     ;AL = длина введённой строки
+     77					 add dx,2		 ;DX = адрес строки
+     78
+     79				     ENDM
+     80
+     81
+     82
+     83	0000			     STSEG SEGMENT PARA	STACK "STACK"
+     84	0000  40*(53 54	41 43 4B)    DB	64 DUP ( "STACK" )
+     85	0140			     STSEG ENDS
+     86
+     87
+     88
+     89	0000			     DSEG SEGMENT PARA PUBLIC "DATA"
+     90
+     91	0000  0A 0D 57 72 69 74	65+  write_num DB 10,13,'Write your number -> $'
+     92	      20 79 6F 75 72 20	6E+
+     93	      75 6D 62 65 72 20	2D+
+     94	      3E 20 24
+     95
+     96	0018  07 ?? 05*(3F)	     userNumber	DB 7,?,5 dup('?')
+     97	001F  0A 0D 45 52 52 4F	52+  error_test	DB 10,13,'ERROR	$'
+     98	      20 24
+     99	0028  0A 0D 59 6F 75 72	20+  your_num DB 10,13,'Your number is -> $'
+    100	      6E 75 6D 62 65 72	20+
+    101	      69 73 20 2D 3E 20	24
+    102	003D			     DSEG ENDS
+    103
+    104
+    105
+    106
+    107
+    108	0000			     CSEG SEGMENT PARA PUBLIC "CODE"
+    109
+    110
+    111	0000			     MAIN PROC FAR
+    112				     ASSUME CS:	CSEG, DS: DSEG,	SS: STSEG
+    113				     ; адреса повернення
+    114	0000  1E			     PUSH DS
+Turbo Assembler	 Version 4.0	    02/12/18 16:50:44	    Page 3
+lab5.asm
+
+
+
+    115	0001  33 C0			     XOR AX, AX
+    116	0003  50			     PUSH AX
+    117
+    118	0004  B8 0000s			     MOV AX, DSEG
+    119	0007  8E D8			     MOV DS, AX
+    120
+    121
+    122				     ;;;;;
+    123
+    124					     write_mes write_num
+1   125	0009  BA 0000r			     lea dx, write_num
+1   126	000C  B4 09			     mov ah,9
+1   127	000E  CD 21			     int 21h
+    128
+    129				     ;;;;;
+    130
+    131
+    132					     input
+1   133	0010  B4 0A		      mov ah,0Ah	      ;Функция DOS 0Ah -	ввод строки в буфер
+1   134	0012  BA 0018r			 lea dx,userNumber	     ;DX = aдрес буфера
+1   135	0015  CD 21			 int 21h		 ;Обращение к	функции DOS
+1   136	0017  A0 0019r			 mov al,[userNumber+1]	     ;AL = длина введённой строки
+1   137	001A  83 C2 02			 add dx,2		 ;DX = адрес строки
+    138
+    139
+    140					     convert
+1   141	001D  84 C0		     test al,al	   ;Проверка длины	строки
+1   142	001F  74 59			 jz error		 ;Если равно 0, возвращаем ошибку
+1   143	0021  8B DA			 mov bx, offset	dx	     ;BX = адрес строки
+1   144	0023  8A 1F			 mov bl,[bx]		 ;BL = первый символ строки
+1   145	0025  80 FB 2D			 cmp bl,'-'		 ;Сравнение первого символа с '-'
+1   146	0028  75 03			 jne stsdw_no_sign	 ;Если не	равно, то преобразуем	как	    +
+    147				     число	без знака
+1   148	002A  42			 inc dx			 ;Инкремент адреса строки
+1   149	002B  FE C8			 dec al			 ;Декремент длины	строки
+1   150	002D				 stsdw_no_sign:
+1   151	002D  E8 0057			 call str_to_udec_word	 ;Преобразуем строку в слово без знака
+1   152	0030  72 48			     jc	error
+1   153	0032  80 FB 2D			 cmp bl,'-'		 ;Снова проверяем	знак
+1   154	0035  75 0A			 jne stsdw_plus		 ;Если первый	символ не '-', то число	    +
+    155				     положительное
+1   156	0037  3D 8000			 cmp ax,32768		 ;Модуль отрицательного числа должен +
+    157				     быть не больше	32768
+1   158	003A  77 3E			 ja error		     ;Если больше (без знака),		    +
+    159				     возвращаем ошибку
+1   160	003C  F7 D8			 neg ax			 ;Инвертируем число
+1   161	003E  EB 06 90			 jmp stsdw_ok		 ;Переход к нормальному завершению	    +
+    162				     процедуры
+1   163	0041				 stsdw_plus:
+1   164	0041  3D 7FFF			 cmp ax,32767		 ;Положительное число	должно быть не  +
+    165				     больше 32767
+1   166	0044  77 34			 ja error			 ;Если больше	(без	знака),		    +
+    167				     возвращаем ошибку
+1   168	0046				 stsdw_ok:
+1   169	0046  F8			 clc			 ;CF = 0
+    170
+    171
+Turbo Assembler	 Version 4.0	    02/12/18 16:50:44	    Page 4
+lab5.asm
+
+
+
+    172
+    173
+    174	0047  8B F8			     mov di,ax
+    175
+    176					     write_mes your_num
+1   177	0049  BA 0028r			     lea dx, your_num
+1   178	004C  B4 09			     mov ah,9
+1   179	004E  CD 21			     int 21h
+    180
+    181	0050  8B C7			     mov ax,di
+    182
+    183					     output ax
+1   184	0052  8B D8			 mov bx, ax
+1   185	0054  0B DB			 or bx,	bx
+1   186	0056  79 06			     jns m1
+1   187	0058  B0 2D			     mov al, '-'
+1   188	005A  CD 29			     int 29h
+1   189	005C  F7 DB			     neg bx
+1   190	005E				     m1:
+1   191	005E  8B C3			     mov ax, bx
+1   192	0060  33 C9			     xor cx, cx
+1   193	0062  BB 000A			     mov bx, 10
+1   194	0065				     m2:
+1   195	0065  33 D2			     xor dx, dx
+1   196	0067  F7 F3			     div bx
+1   197	0069  80 C2 30			     add dl, '0'
+1   198	006C  52			     push dx
+1   199	006D  41			     inc cx
+1   200	006E  85 C0			     test ax, ax
+1   201	0070  75 F3			     jnz m2
+1   202	0072				     m3:
+1   203	0072  58			     pop ax
+1   204	0073  CD 29			     int 29h
+1   205	0075  E2 FB			     loop m3
+    206
+    207
+    208
+    209	0077  EB 0D 90			     jmp return_zero
+    210
+    211	007A			       error:
+    212	007A  B8 0003			     mov ax,03
+    213	007D  CD 10				     int 10h
+    214
+    215					     write_mes error_test
+1   216	007F  BA 001Fr			     lea dx, error_test
+1   217	0082  B4 09			     mov ah,9
+1   218	0084  CD 21			     int 21h
+    219
+    220
+    221	0086			      return_zero:
+    222
+    223	0086  CB		     RET
+    224
+    225
+    226	0087			     MAIN ENDP
+    227
+    228
+Turbo Assembler	 Version 4.0	    02/12/18 16:50:44	    Page 5
+lab5.asm
+
+
+
+    229
+    230
+    231
+    232
+    233	0087			      str_to_udec_word proc
+    234	0087  51			 push cx		 ;Сохранение всех	используемых	    +
+    235				     регистров
+    236	0088  52			 push dx
+    237	0089  53			 push bx
+    238	008A  56			 push si
+    239	008B  57			 push di
+    240
+    241	008C  8B F2			 mov si, offset	dx		 ;SI = адрес строки
+    242	008E  BF 000A			 mov di,10		 ;DI = множитель 10 (основание системы	    +
+    243				     счисления)
+    244	0091  33 C9			     xor cx,cx
+    245	0093  8A C8			     mov cl,al
+    246
+    247	0095  33 C0			 xor ax,ax		 ;AX = 0
+    248	0097  33 DB			 xor bx,bx		 ;BX = 0
+    249
+    250	0099			     studw_lp:
+    251	0099  8A 1C			 mov bl,[si]		 ;Загрузка в BL очередного символа	    +
+    252				     строки
+    253	009B  46			 inc si			 ;Инкремент адреса
+    254	009C  80 FB 30			 cmp bl,'0'		 ;Если код символа меньше кода '0'
+    255	009F  7C 15			 jl studw_error		 ; возвращаем	ошибку
+    256	00A1  80 FB 39			 cmp bl,'9'		 ;Если код символа больше кода '9'
+    257	00A4  7F 10			 jg studw_error		 ; возвращаем	ошибку
+    258	00A6  80 EB 30			 sub bl,'0'		 ;Преобразование символа-цифры в	    +
+    259				     число
+    260	00A9  F7 E7			 mul di			 ;AX = AX * 10
+    261	00AB  72 09			 jc studw_error		 ;Если результат больше 16 бит - ошибка
+    262	00AD  03 C3			 add ax,bx		 ;Прибавляем цифру
+    263	00AF  72 05			 jc studw_error		 ;Если переполнение - ошибка
+    264	00B1  E2 E6			 loop studw_lp		 ;Команда цикла
+    265	00B3  EB 04 90			 jmp studw_exit		 ;Успешное завершение	(здесь всегда CF +
+    266				     = 0)
+    267
+    268	00B6			     studw_error:
+    269	00B6  33 C0			 xor ax,ax		 ;AX = 0
+    270	00B8  F9			 stc			 ;CF = 1 (Возвращаем ошибку)
+    271
+    272	00B9			     studw_exit:
+    273	00B9  5F			 pop di			 ;Восстановление регистров
+    274	00BA  5E			 pop si
+    275	00BB  5B			 pop bx
+    276	00BC  5A			 pop dx
+    277	00BD  59			 pop cx
+    278	00BE  C3			 ret
+    279	00BF			     str_to_udec_word endp
+    280
+    281	00BF			     CSEG ENDS
+    282
+    283
+    284
+    285				     END MAIN
+Turbo Assembler	 Version 4.0	    02/12/18 16:50:44	    Page 6
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "02/12/18"
+??FILENAME			  Text	 "lab5	  "
+??TIME				  Text	 "16:50:44"
+??VERSION			  Number 0400
+@CPU				  Text	 0101H
+@CURSEG				  Text	 CSEG
+@FILENAME			  Text	 LAB5
+@WORDSIZE			  Text	 2
+ERROR				  Near	 CSEG:007A
+ERROR_TEST			  Byte	 DSEG:001F
+M1				  Near	 CSEG:005E
+M2				  Near	 CSEG:0065
+M3				  Near	 CSEG:0072
+MAIN				  Far	 CSEG:0000
+RETURN_ZERO			  Near	 CSEG:0086
+STR_TO_UDEC_WORD		  Near	 CSEG:0087
+STSDW_NO_SIGN			  Near	 CSEG:002D
+STSDW_OK			  Near	 CSEG:0046
+STSDW_PLUS			  Near	 CSEG:0041
+STUDW_ERROR			  Near	 CSEG:00B6
+STUDW_EXIT			  Near	 CSEG:00B9
+STUDW_LP			  Near	 CSEG:0099
+USERNUMBER			  Byte	 DSEG:0018
+WRITE_NUM			  Byte	 DSEG:0000
+YOUR_NUM			  Byte	 DSEG:0028
+
+Macro Name
+
+CONVERT
+INPUT
+OUTPUT
+WRITE_MES
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+CSEG				  16  00BF Para	  Public  CODE
+DSEG				  16  003D Para	  Public  DATA
+STSEG				  16  0140 Para	  Stack	  STACK
+

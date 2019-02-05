@@ -1,0 +1,99 @@
+Turbo Assembler	 Version 4.0	    18/10/18 21:14:06	    Page 1
+new.asm
+
+
+
+      1	0000			     STSEG SEGMENT PARA	STACK "STACK"
+      2	0000  40*(53 54	41 43 4B)    DB	64 DUP ( "STACK" )
+      3	0140			     STSEG ENDS
+      4	0000			     DSEG SEGMENT PARA PUBLIC "DATA"
+      5	0000  45 52 52 4F 52 20	4C+  MAS DB 'ERROR Limit EXENDED$'
+      6	      69 6D 69 74 20 45	58+
+      7	      45 4E 44 45 44 24
+      8	0014  07 ?? 07*(3F)	     DUMP DB 7,?,7 dup('?')
+      9
+     10
+     11	001D			     DSEG ENDS
+     12
+     13	0000			     CSEG SEGMENT PARA PUBLIC "CODE"
+     14
+     15
+     16
+     17	0000			     print_someone_shit:
+     18	0000  52		     push dx
+     19	0001  50		     push ax
+     20	0002  BA 0000r		     lea dx, mas
+     21	0005  B4 09		     mov ah,9
+     22	0007  CD 21		     int 21h
+     23	0009  5A		     pop dx
+     24	000A  58		     pop ax
+     25	000B  C3		     ret
+     26
+     27
+     28
+     29
+     30	000C			     MAIN PROC FAR
+     31				     ASSUME CS:	CSEG, DS: DSEG,	SS: STSEG
+     32				     ; адреса повернення
+     33	000C  1E		     PUSH DS
+     34				     ;mov AX, 0
+     35	000D  50		     PUSH AX
+     36				     ;init DS
+     37	000E  B8 0000s		     MOV AX, DSEG
+     38	0011  8E D8		     MOV DS, AX
+     39
+     40
+     41
+     42				     ;;;;;
+     43
+     44
+     45	0013  E8 FFEA		     call print_someone_shit
+     46
+     47
+     48
+     49
+     50
+     51
+     52
+     53	0016  CB		     RET
+     54
+     55
+     56
+     57
+Turbo Assembler	 Version 4.0	    18/10/18 21:14:06	    Page 2
+new.asm
+
+
+
+     58
+     59
+     60	0017			     MAIN ENDP
+     61	0017			     CSEG ENDS
+     62				     END MAIN
+Turbo Assembler	 Version 4.0	    18/10/18 21:14:06	    Page 3
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "18/10/18"
+??FILENAME			  Text	 "new	  "
+??TIME				  Text	 "21:14:06"
+??VERSION			  Number 0400
+@CPU				  Text	 0101H
+@CURSEG				  Text	 CSEG
+@FILENAME			  Text	 NEW
+@WORDSIZE			  Text	 2
+DUMP				  Byte	 DSEG:0014
+MAIN				  Far	 CSEG:000C
+MAS				  Byte	 DSEG:0000
+PRINT_SOMEONE_SHIT		  Near	 CSEG:0000
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+CSEG				  16  0017 Para	  Public  CODE
+DSEG				  16  001D Para	  Public  DATA
+STSEG				  16  0140 Para	  Stack	  STACK
+

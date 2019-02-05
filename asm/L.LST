@@ -1,0 +1,239 @@
+Turbo Assembler	 Version 4.0	    18/10/18 18:18:03	    Page 1
+l.asm
+
+
+
+      1	0000			     STSEG SEGMENT PARA	STACK "STACK"
+      2	0000			     STSEG ENDS
+      3
+      4
+      5	0000			     DSEG SEGMENT PARA PUBLIC "DATA"
+      6
+      7	0000  62 79 20 73 76 69	6E+  VERY_IMPORTANT_VAR	DB 98, 121, 32,	115, 118, 105, 110, 33
+      8	      21
+      9	0008  07 ?? 05*(??)	     USER_NUM DB 7, ?, 5 DUP(?)	 ; 5 СИМВОЛОВ ДЛЯ ВВОДА	(ЧТО	БЫ ВЛЕЗТЬ В+
+     10				     2 БАЙТА)
+     11	000F  45 4E 54 45 52 20	4E+  PROMPT DB 'ENTER NUM -> $'	 ; СООБЩЕНИЕ ДЛЯ ВВОДА
+     12	      55 4D 20 2D 3E 20	24
+     13	001D  45 52 52 4F 52 0A	24   ERROR_MSG DB 'ERROR',10,'$' ; СООБЩЕНИЕ О ОШИБКЕ С ПЕРЕВОДОМ	    +
+     14				     СТРОКИ
+     15	0024  0000		     DIGIT DW 0			 ; ТУТ ХРАНИМ ЧИСЛО
+     16
+     17	0026			     DSEG ENDS
+     18
+     19
+     20	0000			     CSEG SEGMENT PARA PUBLIC "CODE"
+     21
+     22	0000			     MAIN PROC FAR
+     23
+     24				       ASSUME CS: CSEG,	DS: DSEG, SS: STSEG
+     25				       ; СТАРТОВЫЕ ПРИГОТОВЛЕНИЯ
+     26	0000  1E		       PUSH DS
+     27	0001  33 C0		       XOR AX, AX
+     28	0003  50		       PUSH AX
+     29
+     30	0004  B8 0000s		       MOV AX, DSEG
+     31	0007  8E D8		       MOV DS, AX
+     32
+     33
+     34	0009  EB 08 90		       JMP START ; ПРЫГАЕМ НА СТАРТ А СНИЗУ	ОБЬЯВИМ "ФУНКЦИИ"
+     35
+     36	000C			     PRINT_ERROR: ; ВЫВОД ОШИБКИ
+     37	000C  BA 001Dr		       LEA DX, ERROR_MSG
+     38	000F  B4 09		       MOV AH, 9
+     39	0011  CD 21		       INT 21H
+     40				       ;INT 4CH
+     41
+     42
+     43	0013			     START:
+     44	0013  C7 06 0024r 0000	       MOV DIGIT, 0
+     45
+     46				       ; ПРОСЬБА	ВВЕСТИ ЧИСЛО
+     47
+     48	0019  BA 000Fr		       LEA DX, PROMPT
+     49	001C  B4 09		       MOV AH, 9
+     50	001E  CD 21		       INT 21H
+     51
+     52				       ; ВВОД
+     53
+     54	0020  BA 0008r		       LEA DX, USER_NUM
+     55	0023  B4 0A		       MOV AH, 10
+     56	0025  CD 21		       INT 21H
+     57
+Turbo Assembler	 Version 4.0	    18/10/18 18:18:03	    Page 2
+l.asm
+
+
+
+     58				       ; ПЕРЕВОД	СТРОКИ
+     59	0027  B0 0A		       MOV AL, 10
+     60	0029  CD 29		       INT 29H
+     61
+     62
+     63
+     64				     ; ПЕРЕТВОРЕННЯ	НА ЧИСЛО
+     65				     ; DX = СВОЙ ФЛАГ ОТРИЦАТЕЛЬНОГО ЧИСЛА
+     66				     ; DI = СЧЕТЧИК (ИНДЕКС) СТРОКИ
+     67				     ; CX = СЧЕТЧИК ДЛЯ СТЕПЕНИ
+     68
+     69	002B  BF 0000		       MOV DI, 0 ; DI =	ИНДЕКС СИМВОЛА В МАССИВЕ
+     70
+     71	002E			     N1:
+     72	002E  33 C0		       XOR AX, AX
+     73	0030  BB 0008r		       MOV BX, OFFSET USER_NUM ; BX = *USER_NUM
+     74				       ;LEA BX,	USER_NUM
+     75	0033  8A 41 02		       MOV AL, [BX+DI+2] ; AL =	USER_NUM[I] Т.Е. ТЕКУЩИЙ СИМВОЛ
+     76
+     77				       ; ПРОВЕРКИ
+     78
+     79				       ; ЕСЛИ ЧИСЛО ПЕРЕЙТИ НА IS_NUM, ИНАЧЕ ПРОДОЛЖИТЬ
+     80	0036  3C 3A		       CMP AL, ':'    ;	':' = '9'+1
+     81	0038  73 07		       JNB NOT_NUM     ; JUMP NOT_NUM IF AL > '9'
+     82	003A  3C 30		       CMP AL, '0'
+     83	003C  72 03		       JB NOT_NUM     ;	JUMP NOT_NUM IF	AL < '0'
+     84	003E  EB 10 90		       JMP IS_NUM      ; ELSE JUMP IS_NUM
+     85
+     86	0041			     NOT_NUM:
+     87
+     88				       ; ЕСЛИ НЕ ЧИСЛО И НЕ ЗНАК МИНУСА	ТО ОШИБКА
+     89	0041  3D 002D		       CMP AX, '-'
+     90	0044  75 C6		       JNZ PRINT_ERROR	 ; ERROR IF NOT	'-'
+     91
+     92				       ; ЕСЛИ ЗНАК МИНУСА	НО НЕ ПЕРВЫМ ТО ОШИБКА
+     93	0046  0B FF		       OR DI, DI
+     94	0048  75 C2		       JNZ PRINT_ERROR	 ; ERROR IF NOT	FIRST
+     95
+     96				       ; ЕСЛИ НЕТУ ОШИБОК	ТО СТАВИМ ФЛАГ МИНУСА	И		    +
+     97				     ОБРАБАТЫВАЕМ СРАЗУ СЛЕДУЮЩИЙ СИМВОЛ
+     98	004A  BA 0001		       MOV DX, 1  ; SET	MINUS FLAG
+     99				      ;	POP AX
+    100				      ;	PUSH 1
+    101
+    102	004D  47		       INC DI
+    103	004E  EB DE		       JMP N1 ;	NEXT SYMB
+    104
+    105	0050			     IS_NUM:
+    106	0050  2D 0030		       SUB AX, '0' ; ATOI, AX ТЕПЕРЬ ЧИСЛО
+    107
+    108				       ; 10 ^ N	<=> BL ^ (LEN -	I - 1)
+    109	0053  33 C9		       XOR CX, CX
+    110	0055  8A 4F 01		       MOV CL, [BX+1] ;	CX = N,	FROM LEN-1 TO 0
+    111	0058  47		       INC DI ;	I++
+    112	0059  2B CF		       SUB CX, DI
+    113	005B  33 DB		       XOR BX, BX
+    114	005D  BB 000A		       MOV BX, 10 ; BL = 10
+Turbo Assembler	 Version 4.0	    18/10/18 18:18:03	    Page 3
+l.asm
+
+
+
+    115
+    116
+    117	0060  E3 06		       JCXZ SKIP_POW ; ЕСЛИ	ПОКАЗАТЕЛЬ СТЕПЕНИ 0 ТО НЕ	УМНОЖАЕМ
+    118	0062			     POW:
+    119	0062  F7 E3		       MUL BX	     ; ИНАЧЕ УМНОЖАЕМ НУЖНОЕ	КОЛ-ВО РАЗ
+    120	0064  70 A6		       JO PRINT_ERROR	 ; ERROR IF OVERFLOW
+    121	0066  E2 FA		       LOOP POW
+    122	0068			     SKIP_POW:
+    123
+    124
+    125	0068  01 06 0024r	       ADD DIGIT, AX ; ПРИБАВЛЯЕМ ПОЛУЧЕННОЕ ЧИСЛО В ЕГО		    +
+    126				     ЗАКОННОЕ МЕСТО В ОПЕРАТИВКЕ
+    127	006C  70 9E		       JO PRINT_ERROR	 ; ERROR IF OVERFLOW
+    128
+    129				       ; ЕСЛИ ЕЩЕ ЕСТЬ СИМВОЛЫ ОБРАБОТАТЬ ИХ
+    130	006E  BB 0008r		       MOV BX, OFFSET USER_NUM
+    131	0071  8A 47 01		       MOV AL, [BX+1]; AL = LEN	USER_NUM
+    132	0074  3B C7		       CMP AX, DI ; IF I != LEN	=> JUMP	N1
+    133	0076  75 B6		       JNZ N1
+    134
+    135				       ; ЕСЛИ СИМВОЛОВ БОЛЬШЕ	НЕТУ
+    136				       ; ДЕЛАЕМ ЧИСЛО ОТРИЦАТЕЛЬНЫМ, ЕСЛИ НУЖНО
+    137	0078  83 FA 01		       CMP DX, 1
+    138	007B  75 04		       JNZ PRINTING ; ЕСЛИ НЕ НУЖНО ПРОПУСКАЕМ
+    139	007D  F7 1E 0024r	       NEG DIGIT
+    140
+    141
+    142
+    143	0081			     PRINTING:	 ; ВЫВОД
+    144
+    145	0081  8B 1E 0024r	       MOV BX, DIGIT   ; НАШЕ ЧИСЛО ТЕПЕРЬ В BX
+    146				       ; ПРОВЕРЯЕМ МИНУС,	ПРИНТИМ ЕСЛИ	НУЖНО
+    147	0085  0B DB		       OR BX, BX
+    148	0087  79 06		       JNS M1 ;	JUMP IF	SF == 0	(IF POSITIVE)
+    149	0089  B0 2D		       MOV AL, '-' ; ELSE PRINT	SYMBOL '-'
+    150	008B  CD 29		       INT 29H
+    151	008D  F7 DB		       NEG BX ;	AND MADE POSITIVE
+    152
+    153	008F			     M1:
+    154	008F  8B C3		       MOV AX, BX
+    155	0091  33 C9		       XOR CX, CX
+    156	0093  BB 000A		       MOV BX, 10 ; DIVIDER = 10
+    157	0096			     M2:
+    158				       ; ДЕЛАЕМ ИЗ ОСТАЧИ	СИМВОЛ И	ПУШИМ В СТЕК
+    159	0096  33 D2		       XOR DX, DX
+    160	0098  F7 F3		       DIV BX ;	AX = AX	// BX;	DX = AX	% BX	BX = 10
+    161	009A  80 C2 30		       ADD DL, '0' ; ITOA DX
+    162	009D  52		       PUSH DX
+    163	009E  41		       INC CX  ; CX++
+    164	009F  85 C0		       TEST AX,	AX
+    165	00A1  75 F3		       JNZ M2 ;	IF NOT 0 JUMP M2
+    166	00A3			     M3:
+    167				       ; ПРИНТИМ	СТЕК
+    168	00A3  58		       POP AX; PRINT AX
+    169	00A4  CD 29		       INT 29H
+    170	00A6  E2 FB		       LOOP M3;	CX--; JUMP M3
+    171
+Turbo Assembler	 Version 4.0	    18/10/18 18:18:03	    Page 4
+l.asm
+
+
+
+    172	00A8  CB		       RET
+    173
+    174
+    175
+    176	00A9			     MAIN ENDP
+    177
+    178	00A9			     CSEG ENDS
+    179				     END MAIN
+Turbo Assembler	 Version 4.0	    18/10/18 18:18:03	    Page 5
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "18/10/18"
+??FILENAME			  Text	 "l	  "
+??TIME				  Text	 "18:18:03"
+??VERSION			  Number 0400
+@CPU				  Text	 0101H
+@CURSEG				  Text	 CSEG
+@FILENAME			  Text	 L
+@WORDSIZE			  Text	 2
+DIGIT				  Word	 DSEG:0024
+ERROR_MSG			  Byte	 DSEG:001D
+IS_NUM				  Near	 CSEG:0050
+M1				  Near	 CSEG:008F
+M2				  Near	 CSEG:0096
+M3				  Near	 CSEG:00A3
+MAIN				  Far	 CSEG:0000
+N1				  Near	 CSEG:002E
+NOT_NUM				  Near	 CSEG:0041
+POW				  Near	 CSEG:0062
+PRINTING			  Near	 CSEG:0081
+PRINT_ERROR			  Near	 CSEG:000C
+PROMPT				  Byte	 DSEG:000F
+SKIP_POW			  Near	 CSEG:0068
+START				  Near	 CSEG:0013
+USER_NUM			  Byte	 DSEG:0008
+VERY_IMPORTANT_VAR		  Byte	 DSEG:0000
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+CSEG				  16  00A9 Para	  Public  CODE
+DSEG				  16  0026 Para	  Public  DATA
+STSEG				  16  0000 Para	  Stack	  STACK
+

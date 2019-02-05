@@ -1,0 +1,187 @@
+Turbo Assembler	 Version 4.0	    22/11/18 15:53:07	    Page 1
+maks.asm
+
+
+
+      1	0000			     STSEG  SEGMENT  PARA  STACK  "STACK"
+      2	0000  40*(3F)			 DB 64 DUP ( '?' )
+      3	0040			     STSEG  ENDS
+      4
+      5	0000			     DSEG segment para public "data"
+      6	0000  07 ?? 07*(3F)		 num_str db 7,?, 7 dup('?')
+      7	0009  ????			 num dw	?
+      8	000B  0D 0A 45 72 72 6F	72+	 error_msg db 13,10,'Error occurs! Check input data!$'
+      9	      20 6F 63 63 75 72	73+
+     10	      21 20 43 68 65 63	6B+
+     11	      20 69 6E 70 75 74	20+
+     12	      64 61 74 61 21 24
+     13	002D  0D 0A 50 6C 65 61	73+	 enter_request db 13,10,'Please	enter the number(5 sumbols max)$',13,10
+     14	      65 20 65 6E 74 65	72+
+     15	      20 74 68 65 20 6E	75+
+     16	      6D 62 65 72 28 35	20+
+     17	      73 75 6D 62 6F 6C	73+
+     18	      20 6D 61 78 29 24	0D+
+     19	      0A
+     20	0058			     DSEG ENDS
+     21
+     22	0000			     CSEG  SEGMENT PARA	PUBLIC	"CODE"
+     23
+     24	0000				 MAIN  PROC  FAR
+     25					     ASSUME  CS: CSEG, DS: DSEG, SS: STSEG
+     26
+     27	0000  52			     push dx
+     28	0001  33 C0			     xor ax,ax
+     29	0003  50			     push ax
+     30	0004  B8 0000s			     mov ax,dseg
+     31	0007  8E D8			     mov ds,ax
+     32
+     33	0009  B4 09			     mov ah,9
+     34	000B  BA 002Dr			     mov dx,offset enter_request
+     35	000E  CD 21			     int 21h
+     36
+     37	0010  B4 0A			     mov ah,10
+     38	0012  BA 0000r			     lea dx, num_str
+     39	0015  CD 21			     int 21h
+     40	0017  A0 0001r			     mov al,[num_str+1]
+     41	001A  83 C2 02			     add dx,2
+     42
+     43	001D  84 C0			     test al,al
+     44	001F  74 7F			     jz	error
+     45
+     46	0021  8B F2			     mov si,dx
+     47	0023  8A 1C			     mov bl,[si]
+     48	0025  80 FB 2D			     cmp bl,'-'
+     49	0028  75 04			     jne no_sign_conv
+     50	002A  46			     inc si
+     51	002B  42			     inc dx
+     52	002C  FE C8			     dec al
+     53
+     54
+     55	002E				 no_sign_conv:
+     56	002E  53			     push bx
+     57	002F  BF 000A			     mov di,10
+Turbo Assembler	 Version 4.0	    22/11/18 15:53:07	    Page 2
+maks.asm
+
+
+
+     58	0032  8B C8			     mov cx,ax
+     59	0034  32 ED			     xor ch,ch
+     60	0036  33 C0			     xor ax,ax
+     61	0038  33 DB			     xor bx,bx
+     62
+     63	003A				 no_sign_loop:
+     64	003A  8A 1C			     mov bl,[si]
+     65	003C  46			     inc si
+     66	003D  80 FB 30			     cmp bl,'0'
+     67	0040  7C 5E			     jl	error
+     68	0042  80 FB 39			     cmp bl,'9'
+     69	0045  7F 59			     jg	error
+     70	0047  80 EB 30			     sub bl,'0'
+     71	004A  F7 E7			     mul di		     ;AX = AX *	10
+     72	004C  72 52			     jc	error
+     73	004E  03 C3			     add ax,bx
+     74	0050  72 4E			     jc	error
+     75	0052  E2 E6			     loop no_sign_loop
+     76
+     77	0054  5B			     pop bx
+     78	0055  83 FB 2D			     cmp bx,'-'
+     79	0058  75 0A			     jne stsdw_plus
+     80	005A  3D 8000			     cmp ax,32768
+     81	005D  77 41			     ja	error
+     82	005F  F7 D8			     neg ax
+     83	0061  EB 06 90			     jmp finall_of_conv
+     84	0064				 stsdw_plus:
+     85	0064  3D 7FFF			     cmp ax,32767
+     86	0067  77 37			     ja	error
+     87
+     88	0069				 finall_of_conv:
+     89	0069  A3 0009r			     mov num,ax
+     90
+     91	006C  8B 1E 0009r		    mov	 bx, num
+     92	0070  B0 0D			    mov	 al, 13
+     93	0072  CD 29			    int	 29h
+     94	0074  B0 0A			    mov	 al, 10
+     95	0076  CD 29			    int	 29h
+     96	0078  0B DB			    or	 bx, bx
+     97	007A  79 06			    jns	 m1
+     98	007C  B0 2D			    mov	 al, '-'
+     99	007E  CD 29			    int	 29h
+    100	0080  F7 DB			    neg	 bx
+    101	0082				 m1:
+    102	0082  8B C3			    mov	 ax, bx
+    103	0084  33 C9			    xor	 cx, cx
+    104	0086  BB 000A			    mov	 bx, 10
+    105	0089				 m2:
+    106	0089  33 D2			    xor	 dx, dx
+    107	008B  F7 F3			    div	 bx
+    108	008D  80 C2 30			    add	 dl, '0'
+    109	0090  52			    push dx
+    110	0091  41			    inc	 cx
+    111	0092  85 C0			    test ax, ax
+    112	0094  75 F3			    jnz	 m2
+    113	0096				 m3:
+    114	0096  58			    pop	ax
+Turbo Assembler	 Version 4.0	    22/11/18 15:53:07	    Page 3
+maks.asm
+
+
+
+    115	0097  CD 29			    int	29h
+    116	0099  E2 FB			    loop m3
+    117
+    118	009B  B4 08			    mov	ah,8
+    119	009D  CD 21			    int	21h
+    120
+    121	009F  CB			    ret
+    122
+    123	00A0				 error:
+    124	00A0  BA 000Br			     mov dx,offset error_msg
+    125	00A3  B4 09			     mov ah,9
+    126	00A5  CD 21			     int 21h
+    127	00A7  B4 08			     mov ah,8
+    128	00A9  CD 21			     int 21h
+    129	00AB  CB			     ret
+    130
+    131
+    132	00AC				  MAIN ENDP
+    133
+    134	00AC			     CSEG ENDS
+    135
+    136				     END MAIN
+Turbo Assembler	 Version 4.0	    22/11/18 15:53:07	    Page 4
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "22/11/18"
+??FILENAME			  Text	 "maks	  "
+??TIME				  Text	 "15:53:07"
+??VERSION			  Number 0400
+@CPU				  Text	 0101H
+@CURSEG				  Text	 CSEG
+@FILENAME			  Text	 MAKS
+@WORDSIZE			  Text	 2
+ENTER_REQUEST			  Byte	 DSEG:002D
+ERROR				  Near	 CSEG:00A0
+ERROR_MSG			  Byte	 DSEG:000B
+FINALL_OF_CONV			  Near	 CSEG:0069
+M1				  Near	 CSEG:0082
+M2				  Near	 CSEG:0089
+M3				  Near	 CSEG:0096
+MAIN				  Far	 CSEG:0000
+NO_SIGN_CONV			  Near	 CSEG:002E
+NO_SIGN_LOOP			  Near	 CSEG:003A
+NUM				  Word	 DSEG:0009
+NUM_STR				  Byte	 DSEG:0000
+STSDW_PLUS			  Near	 CSEG:0064
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+CSEG				  16  00AC Para	  Public  CODE
+DSEG				  16  0058 Para	  Public  DATA
+STSEG				  16  0040 Para	  Stack	  STACK
+

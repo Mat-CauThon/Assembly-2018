@@ -1,0 +1,79 @@
+Turbo Assembler	 Version 4.0	    20/11/18 23:47:44	    Page 1
+123.asm
+
+
+
+      1	0000			     STSEG SEGMENT PARA	STACK "STACK"
+      2	0000  40*(53 54	41 43 4B)    DB	64 DUP ("STACK")
+      3	0140			     STSEG ENDS
+      4				     ;??????? ?????
+      5	0000			     DSEG SEGMENT PARA PUBLIC "DATA"
+      6
+      7	0000  53 6F 6D 65 20 73	74+  string	db	'Some stroka hear$'
+      8	      72 6F 6B 61 20 68	65+
+      9	      61 72 24
+     10	      =0011		     len_str=$-string
+     11
+     12	0011			     DSEG ENDS
+     13				     ;??????? ?????
+     14	0000			     CSEG SEGMENT PARA PUBLIC "CODE"
+     15
+     16	0000			      MAIN PROC	FAR
+     17				     ASSUME CS:	CSEG, DS:DSEG, SS:STSEG
+     18	0000  1E			PUSH DS
+     19	0001  33 C0			     XOR AX, AX
+     20	0003  50			     PUSH AX
+     21
+     22	0004  B8 0000s			     MOV AX, DSEG
+     23	0007  8E D8			     MOV DS, AX
+     24
+     25
+     26	0009  BA 0000r			     lea dx, string
+     27	000C  B4 09			     mov ah,9
+     28	000E  CD 21			     int 21h
+     29
+     30	0010  8E D8			     mov     ds,ax
+     31	0012  8E C0			     mov     es,ax
+     32	0014  FC			     cld
+     33	0015  B0 20			     mov     al,' '
+     34	0017  BF 0000r			     lea     di,string
+     35	001A  B9 0011			     mov     cx,len_str
+     36	001D  F3> AA		     rep     stosb	     ;заполняем пробелами строку str
+     37
+     38	001F  BA 0000r		     lea dx, string
+     39	0022  B4 09			     mov ah,9
+     40	0024  CD 21			     int 21h
+     41
+     42
+     43
+     44	0026  CB			ret
+     45
+     46	0027			     MAIN ENDP
+     47	0027			     CSEG ENDS
+     48				     END MAIN
+Turbo Assembler	 Version 4.0	    20/11/18 23:47:44	    Page 2
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "20/11/18"
+??FILENAME			  Text	 "123	  "
+??TIME				  Text	 "23:47:44"
+??VERSION			  Number 0400
+@CPU				  Text	 0101H
+@CURSEG				  Text	 CSEG
+@FILENAME			  Text	 123
+@WORDSIZE			  Text	 2
+LEN_STR				  Number 0011
+MAIN				  Far	 CSEG:0000
+STRING				  Byte	 DSEG:0000
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+CSEG				  16  0027 Para	  Public  CODE
+DSEG				  16  0011 Para	  Public  DATA
+STSEG				  16  0140 Para	  Stack	  STACK
+

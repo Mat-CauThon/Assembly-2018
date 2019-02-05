@@ -1,0 +1,576 @@
+Turbo Assembler	 Version 4.0	    22/11/18 12:41:13	    Page 1
+lab4_1.asm
+
+
+
+      1
+      2	0000			     STSEG SEGMENT PARA	STACK "STACK"
+      3	0000  40*(53 54	41 43 4B)    DB	64 DUP ( "STACK" )
+      4	0140			     STSEG ENDS
+      5
+      6
+      7
+      8	0000			     DSEG SEGMENT PARA PUBLIC "DATA"
+      9
+     10	0000  4E20*(????)	     my_array dw 20000 dup (?)
+     11	9C40  0A 0D 4D 61 78 20	65+  max_mes db	10,13, 'Max element = $'
+     12	      6C 65 6D 65 6E 74	20+
+     13	      3D 20 24
+     14	9C51  0A 0D 4D 69 6E 20	65+  min_mes db	10,13, 'Min element = $'
+     15	      6C 65 6D 65 6E 74	20+
+     16	      3D 20 24
+     17	9C62  0A 0D 59 6F 75 72	20+  sorted_mes	db 10,13,'Your sorted array -> $'
+     18	      73 6F 72 74 65 64	20+
+     19	      61 72 72 61 79 20	2D+
+     20	      3E 20 24
+     21	9C7A  0A 0D 53 75 6D 6D	61+  summa_mes db 10,13,'Summa of your array = $'
+     22	      20 6F 66 20 79 6F	75+
+     23	      72 20 61 72 72 61	79+
+     24	      20 3D 20 24
+     25	9C93  0A 0D 4F 6F 70 73	2C+  minus_max_el_mes db 10,13,'Oops, you input	wrong max elements of array ( <0 ) $'
+     26	      20 79 6F 75 20 69	6E+
+     27	      70 75 74 20 77 72	6F+
+     28	      6E 67 20 6D 61 78	20+
+     29	      65 6C 65 6D 65 6E	74+
+     30	      73 20 6F 66 20 61	72+
+     31	      72 61 79 20 28 20	3C+
+     32	      30 20 29 20 24
+     33	9CC9  0A 0D 4F 6F 70 73	2C+  error_size_mes db 10,13,'Oops, summa of elements is too big$'
+     34	      20 73 75 6D 6D 61	20+
+     35	      6F 66 20 65 6C 65	6D+
+     36	      65 6E 74 73 20 69	73+
+     37	      20 74 6F 6F 20 62	69+
+     38	      67 24
+     39	9CEE  0A 0D 57 72 69 74	65+  write_max_elements	db 10,13,'Write	max elements of	array -> $'
+     40	      20 6D 61 78 20 65	6C+
+     41	      65 6D 65 6E 74 73	20+
+     42	      6F 66 20 61 72 72	61+
+     43	      79 20 2D 3E 20 24
+     44	9D10  0A 0D 57 72 69 74	65+  write_array DB 10,13,'Write your elements of array	$'
+     45	      20 79 6F 75 72 20	65+
+     46	      6C 65 6D 65 6E 74	73+
+     47	      20 6F 66 20 61 72	72+
+     48	      61 79 20 24
+     49	9D30  0A 0D 57 72 6F 6E	67+  error_test	DB 10,13,'Wrong	input data, try	again $'
+     50	      20 69 6E 70 75 74	20+
+     51	      64 61 74 61 2C 20	74+
+     52	      72 79 20 61 67 61	69+
+     53	      6E 20 24
+     54	9D4F  0A 0D 20 2D 3E 20	24   new_string	db 10,13, ' -> $'
+     55	9D56  0A 0D 24		     enter_string db 10,13,'$'
+     56
+     57	9D59  07 ?? 05*(3F)	     userNumber	DB 7,?,5 dup('?')
+Turbo Assembler	 Version 4.0	    22/11/18 12:41:13	    Page 2
+lab4_1.asm
+
+
+
+     58
+     59
+     60
+     61
+     62	9D60			     DSEG ENDS
+     63
+     64
+     65	0000			     CSEG SEGMENT PARA PUBLIC "CODE"
+     66
+     67
+     68
+     69
+     70	0000			     MAIN PROC FAR
+     71				     ASSUME CS:	CSEG, DS: DSEG,	SS: STSEG
+     72				     ; адреса повернення
+     73	0000  1E			     PUSH DS
+     74	0001  33 C0			     XOR AX, AX
+     75	0003  50			     PUSH AX
+     76	0004  B8 0000s			     MOV AX, DSEG
+     77	0007  8E D8			     MOV DS, AX
+     78
+     79
+     80	0009  BA 9CEEr			     lea dx, write_max_elements
+     81	000C  B4 09			     mov ah,9
+     82	000E  CD 21			     int 21h
+     83
+     84
+     85	0010			     begin:
+     86	0010  E8 010C			     call input_symbol
+     87	0013  E8 014F			     call number_convert
+     88	0016  72 F8			     jc	begin
+     89
+     90	0018  3D 0000			     cmp ax,0
+     91	001B  7C 2F			     jl	run_away1
+     92
+     93	001D  8B C8			     mov cx,ax
+     94
+     95	001F  BA 9D10r			     lea dx, write_array
+     96	0022  B4 09			     mov ah,9
+     97	0024  CD 21			     int 21h
+     98
+     99
+    100	0026  33 F6			     xor si,si
+    101					     ;mov si,0h
+    102
+    103	0028  8B D9			     mov bx,cx
+    104
+    105	002A			     input_array:
+    106	002A  33 C0			     xor ax,ax
+    107	002C  BA 9D4Fr			     lea dx, new_string
+    108	002F  B4 09			     mov ah,9
+    109	0031  CD 21			     int 21h
+    110
+    111	0033  E8 00E9			     call input_symbol
+    112	0036  E8 012C			     call number_convert
+    113	0039  72 EF			     jc	input_array
+    114
+Turbo Assembler	 Version 4.0	    22/11/18 12:41:13	    Page 3
+lab4_1.asm
+
+
+
+    115					     ;xor ah,ah
+    116
+    117	003B  BA 0000r			     lea dx, my_array
+    118
+    119	003E  89 84 0000r		     mov my_array[si], ax
+    120	0042  83 C6 02			     add si, 2
+    121
+    122	0045  E2 E3		     loop input_array
+    123	0047  8B CB			     mov cx,bx
+    124
+    125	0049  EB 0B 90			     jmp runskip
+    126	004C				     run_away1:
+    127
+    128	004C  BA 9C93r			     lea dx, minus_max_el_mes
+    129	004F  B4 09			     mov ah,9
+    130	0051  CD 21			     int 21h
+    131
+    132	0053  EB 66 90			     jmp run_away
+    133	0056				     runskip:
+    134
+    135	0056  BA 9D56r			     lea dx, enter_string
+    136	0059  B4 09			     mov ah,9
+    137	005B  CD 21			     int 21h
+    138
+    139	005D  33 F6			     xor si,si
+    140					     ;xor ah,ah
+    141					     ;inc si
+    142
+    143
+    144	005F  E8 0099		     call summa_array
+    145	0062  70 15		     jo	run_away_summa
+    146	0064  8B D8		     mov bx,ax
+    147	0066  BA 9C7Ar		     lea dx, summa_mes
+    148	0069  B4 09			     mov ah,9
+    149	006B  CD 21			     int 21h
+    150	006D  8B C3		     mov ax,bx
+    151	006F  E8 00C5		     call write
+    152	0072  BA 9D56r			     lea dx, enter_string
+    153	0075  B4 09			     mov ah,9
+    154	0077  CD 21			     int 21h
+    155	0079			     run_away_summa:
+    156
+    157	0079  E8 0040		     call sort_array
+    158
+    159	007C  BA 9C62r			     lea dx, sorted_mes
+    160	007F  B4 09			     mov ah,9
+    161	0081  CD 21			     int 21h
+    162
+    163	0083  8B D9			     mov bx,cx
+    164	0085			     go_away_array:
+    165					     ;mov ax, '0'
+    166					     ;mov bl, offset my_array
+    167	0085  32 E4			     xor ah,ah
+    168	0087  8B 84 0000r		     mov ax, my_array[si]
+    169	008B  E8 00A9			     call write
+    170
+    171	008E  83 C6 02			     add si, 2
+Turbo Assembler	 Version 4.0	    22/11/18 12:41:13	    Page 4
+lab4_1.asm
+
+
+
+    172	0091  B0 20			     mov al, ' '
+    173	0093  CD 29			     int 29h
+    174	0095  E2 EE			     loop go_away_array
+    175	0097  8B CB			     mov cx,bx
+    176
+    177
+    178	0099  BA 9C51r			     lea dx, min_mes
+    179	009C  B4 09			     mov ah,9
+    180	009E  CD 21			     int 21h
+    181
+    182	00A0  A1 0000r			     mov ax,my_array[0]
+    183	00A3  E8 0091			     call write
+    184
+    185	00A6  BA 9C40r			     lea dx, max_mes
+    186	00A9  B4 09			     mov ah,9
+    187	00AB  CD 21			     int 21h
+    188
+    189	00AD  8B F1			     mov si,cx
+    190	00AF  03 F6			     add si,si
+    191	00B1  83 EE 02			     sub si,2
+    192	00B4  8B 84 0000r		     mov ax,my_array[si]
+    193	00B8  E8 007C			     call write
+    194
+    195
+    196
+    197
+    198
+    199	00BB				     run_away:
+    200	00BB  CB		     RET
+    201	00BC			     MAIN ENDP
+    202
+    203	00BC			     sort_array	proc
+    204	00BC  51			     push cx		     ;Сохранение всех используемых	    +
+    205				     регистров
+    206	00BD  52			 push dx
+    207	00BE  53			 push bx
+    208	00BF  56			 push si
+    209	00C0  57			 push di
+    210
+    211	00C1  33 F6			     xor si,si
+    212	00C3  03 C9			     add cx,cx
+    213
+    214	00C5				     sort:
+    215	00C5  83 C6 02			     add si, 2
+    216	00C8  8B BC 0000r		     mov di,my_array[si]
+    217	00CC  83 EE 02			     sub si, 2
+    218	00CF  39 BC 0000r		     cmp my_array[si], di
+    219	00D3  7E 14			     jle continue
+    220	00D5  8B 9C 0000r		     mov bx,my_array[si]
+    221	00D9  89 BC 0000r		     mov my_array[si],di
+    222	00DD  89 9C 0002r		     mov my_array[si+2],bx
+    223
+    224	00E1  83 FE 00			     cmp si,0
+    225	00E4  74 03			     je	continue
+    226	00E6  83 EE 04			     sub si,4
+    227
+    228	00E9				     continue:
+Turbo Assembler	 Version 4.0	    22/11/18 12:41:13	    Page 5
+lab4_1.asm
+
+
+
+    229	00E9  83 C6 02			     add si,2
+    230
+    231	00EC  8B DE			     mov bx,si
+    232	00EE  83 C3 02			     add bx,2
+    233	00F1  3B D9			     cmp bx,cx
+    234	00F3  7C D0			     jl	sort
+    235
+    236
+    237
+    238	00F5				     skip:
+    239	00F5  5F			     pop di		     ;Восстановление регистров
+    240	00F6  5E			 pop si
+    241	00F7  5B			 pop bx
+    242	00F8  5A			 pop dx
+    243	00F9  59			 pop cx
+    244	00FA  C3		     ret
+    245	00FB			     sort_array	endp
+    246
+    247
+    248
+    249	00FB			     summa_array proc
+    250	00FB  51			     push cx		     ;Сохранение всех используемых	    +
+    251				     регистров
+    252	00FC  52			 push dx
+    253	00FD  53			 push bx
+    254	00FE  56			 push si
+    255	00FF  57			 push di
+    256
+    257	0100  33 C0			     xor ax,ax
+    258	0102  33 F6			     xor si,si
+    259	0104			     metka_loop:
+    260
+    261
+    262	0104  03 84 0000r		     add ax,my_array[si]
+    263	0108  70 08			     jo	error_size
+    264	010A  83 C6 02			     add si,2
+    265	010D  E2 F5			     loop metka_loop
+    266
+    267	010F  EB 08 90			     jmp norm
+    268	0112				     error_size:
+    269	0112  BA 9CC9r				     lea dx,error_size_mes   ;;
+    270	0115  B4 09				     mov ah,9				     ;;	  вывод сообщения
+    271	0117  CD 21				     int 21h				     ;;
+    272	0119				     norm:
+    273	0119  5F			     pop di		     ;Восстановление регистров
+    274	011A  5E			 pop si
+    275	011B  5B			 pop bx
+    276	011C  5A			 pop dx
+    277	011D  59			 pop cx
+    278	011E  C3			 ret
+    279	011F			     summa_array endp
+    280
+    281
+    282
+    283	011F			     input_symbol proc
+    284
+    285	011F  51		     push cx
+Turbo Assembler	 Version 4.0	    22/11/18 12:41:13	    Page 6
+lab4_1.asm
+
+
+
+    286	0120  56		     push si
+    287	0121  B0 07			     mov al,7
+    288	0123  8B C8			 mov cx,ax		 ;Сохранение AX в CX
+    289	0125  B4 0A			 mov ah,0Ah		 ;Функция DOS 0Ah - ввод строки в буфер
+    290
+    291	0127  BA 9D59r			 lea dx,userNumber	     ;DX = aдрес буфера
+    292	012A  CD 21			 int 21h		 ;Обращение к	функции DOS
+    293	012C  A0 9D5Ar			 mov al,[userNumber+1]	     ;AL = длина введённой строки
+    294	012F  83 C2 02			 add dx,2		 ;DX = адрес строки
+    295	0132  8A E5			 mov ah,ch		 ;Восстановление AH
+    296	0134  5E		     pop si
+    297	0135  59		     pop cx
+    298
+    299	0136  C3		     ret
+    300	0137			     input_symbol endp
+    301
+    302	0137			     write PROC
+    303
+    304	0137  52			     push dx
+    305	0138  50			     push ax
+    306	0139  53			     push bx
+    307	013A  51			     push cx
+    308
+    309	013B  8B D8			     mov bx,ax
+    310	013D  0B DB			     or	bx, bx
+    311	013F  79 06			     jns m1
+    312	0141  B0 2D			     mov al, '-'
+    313	0143  CD 29			     int 29h
+    314	0145  F7 DB			     neg bx
+    315	0147				     m1:
+    316	0147  8B C3			     mov ax, bx
+    317	0149  33 C9			     xor cx, cx
+    318	014B  BB 000A			     mov bx, 10
+    319	014E				     m2:
+    320	014E  33 D2			     xor dx, dx
+    321	0150  F7 F3			     div bx
+    322	0152  80 C2 30			     add dl, '0'
+    323	0155  52			     push dx
+    324	0156  41			     inc cx
+    325	0157  85 C0			     test ax, ax
+    326	0159  75 F3			     jnz m2
+    327	015B				     m3:
+    328	015B  58			     pop ax
+    329	015C  CD 29			     int 29h
+    330	015E  E2 FB			     loop m3
+    331
+    332	0160  59			     pop cx
+    333	0161  5B			     pop bx
+    334	0162  58			     pop ax
+    335	0163  5A			     pop dx
+    336	0164  C3			     ret
+    337	0165			     write ENDP
+    338
+    339
+    340
+    341	0165			     number_convert proc
+    342
+Turbo Assembler	 Version 4.0	    22/11/18 12:41:13	    Page 7
+lab4_1.asm
+
+
+
+    343					     ;push ax
+    344	0165  53			     push bx
+    345	0166  52			     push dx
+    346	0167  51			     push cx
+    347	0168  56			     push si
+    348
+    349	0169  84 C0			 test al,al		 ;Проверка длины строки
+    350	016B  74 2B			 jz preerror		 ;Если равно 0, возвращаем ошибку
+    351
+    352	016D  8B F0			     mov si,ax
+    353
+    354	016F  8B DA			 mov bx, offset	dx	     ;BX = адрес строки
+    355	0171  8A 1F			 mov bl,[bx]		 ;BL = первый символ строки
+    356	0173  80 FB 2D			 cmp bl,'-'		 ;Сравнение первого символа с '-'
+    357	0176  75 03			 jne stsdw_no_sign	 ;Если не	равно, то преобразуем	как	    +
+    358				     число	без знака
+    359	0178  42			 inc dx			 ;Инкремент адреса строки
+    360	0179  FE C8			 dec al			 ;Декремент длины	строки
+    361	017B			     stsdw_no_sign:
+    362	017B  E8 0026			 call number_module	      ;Преобразуем строку в слово без	    +
+    363				     знака
+    364	017E  72 18			     jc	preerror
+    365	0180  80 FB 2D			 cmp bl,'-'		 ;Снова проверяем	знак
+    366	0183  75 0A			 jne stsdw_plus		 ;Если первый	символ не '-', то число	    +
+    367				     положительное
+    368	0185  3D 8000			 cmp ax,32768		;Модуль отрицательного числа должен  +
+    369				     быть не больше	32768
+    370	0188  77 0E			 ja preerror		     ;Если больше (без знака),		    +
+    371				     возвращаем ошибку
+    372	018A  F7 D8			 neg ax			 ;Инвертируем число
+    373	018C  EB 06 90			 jmp stsdw_ok		 ;Переход к нормальному завершению	    +
+    374				     процедуры
+    375	018F			     stsdw_plus:
+    376	018F  3D 7FFF			 cmp ax,32767		;Положительное число должно быть не   +
+    377				     больше 32767
+    378	0192  77 04			 ja preerror			 ;Если больше	(без	знака),		    +
+    379				     возвращаем ошибку
+    380	0194			     stsdw_ok:
+    381	0194  F8			 clc	     ;CF = 0
+    382	0195  EB 08 90			     jmp okey
+    383
+    384	0198				     preerror:
+    385
+    386
+    387
+    388	0198  BA 9D30r				     lea dx,error_test		     ;;
+    389	019B  B4 09				     mov ah,9				     ;;	  вывод сообщения
+    390	019D  CD 21				     int 21h				     ;;
+    391						     ;mov ax,si
+    392
+    393
+    394	019F				     okey:
+    395
+    396	019F  5E			     pop si
+    397	01A0  59			     pop cx
+    398	01A1  5A			     pop dx
+    399	01A2  5B			     pop bx
+Turbo Assembler	 Version 4.0	    22/11/18 12:41:13	    Page 8
+lab4_1.asm
+
+
+
+    400
+    401	01A3  C3			     ret
+    402	01A4			     number_convert endp
+    403
+    404
+    405	01A4			     number_module PROC
+    406	01A4  51			 push cx		 ;Сохранение всех	используемых	    +
+    407				     регистров
+    408	01A5  52			 push dx
+    409	01A6  53			 push bx
+    410	01A7  56			 push si
+    411	01A8  57			 push di
+    412
+    413	01A9  8B F2			 mov si, offset	dx	 ;SI = адрес строки
+    414	01AB  BF 000A			 mov di,10		 ;DI = множитель 10 (основание системы	    +
+    415				     счисления)
+    416
+    417					     ;movcs cx,al не работает, спросить почему!
+    418	01AE  33 C9			     xor cx,cx
+    419	01B0  8A C8			     mov cl,al
+    420
+    421	01B2  33 C0			 xor ax,ax		 ;AX = 0
+    422	01B4  33 DB			 xor bx,bx		 ;BX = 0
+    423
+    424	01B6			     studw_lp:
+    425	01B6  8A 1C			 mov bl,[si]		 ;Загрузка в BL очередного символа	    +
+    426				     строки
+    427	01B8  46			 inc si			 ;Инкремент адреса
+    428	01B9  80 FB 30			 cmp bl,'0'		 ;Если код символа меньше кода '0'
+    429	01BC  72 15			 jb studw_error		 ; возвращаем	ошибку
+    430	01BE  80 FB 39			 cmp bl,'9'		 ;Если код символа больше кода '9'
+    431	01C1  77 10			 ja studw_error		 ; возвращаем	ошибку
+    432	01C3  80 EB 30			 sub bl,'0'		 ;Преобразование символа-цифры в	    +
+    433				     число
+    434	01C6  F7 E7			 mul di			 ;AX = AX * 10
+    435	01C8  72 09			 jc studw_error		 ;Если результат больше 16 бит - ошибка
+    436	01CA  03 C3			 add ax,bx		 ;Прибавляем цифру
+    437	01CC  72 05			 jc studw_error		 ;Если переполнение - ошибка
+    438	01CE  E2 E6			 loop studw_lp		 ;Команда цикла
+    439	01D0  EB 04 90			 jmp studw_exit		 ;Успешное завершение	(здесь всегда CF +
+    440				     = 0)
+    441
+    442	01D3			     studw_error:
+    443	01D3  33 C0			 xor ax,ax		 ;AX = 0
+    444	01D5  F9			 stc			 ;CF = 1 (Возвращаем ошибку)
+    445
+    446	01D6			     studw_exit:
+    447	01D6  5F			 pop di			 ;Восстановление регистров
+    448	01D7  5E			 pop si
+    449	01D8  5B			 pop bx
+    450	01D9  5A			 pop dx
+    451	01DA  59			 pop cx
+    452	01DB  C3			 ret
+    453	01DC			     number_module ENDP
+    454
+    455
+    456
+Turbo Assembler	 Version 4.0	    22/11/18 12:41:13	    Page 9
+lab4_1.asm
+
+
+
+    457
+    458	01DC			     CSEG ENDS
+    459				     END MAIN
+Turbo Assembler	 Version 4.0	    22/11/18 12:41:13	    Page 10
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "22/11/18"
+??FILENAME			  Text	 "lab4_1  "
+??TIME				  Text	 "12:41:13"
+??VERSION			  Number 0400
+@CPU				  Text	 0101H
+@CURSEG				  Text	 CSEG
+@FILENAME			  Text	 LAB4_1
+@WORDSIZE			  Text	 2
+BEGIN				  Near	 CSEG:0010
+CONTINUE			  Near	 CSEG:00E9
+ENTER_STRING			  Byte	 DSEG:9D56
+ERROR_SIZE			  Near	 CSEG:0112
+ERROR_SIZE_MES			  Byte	 DSEG:9CC9
+ERROR_TEST			  Byte	 DSEG:9D30
+GO_AWAY_ARRAY			  Near	 CSEG:0085
+INPUT_ARRAY			  Near	 CSEG:002A
+INPUT_SYMBOL			  Near	 CSEG:011F
+M1				  Near	 CSEG:0147
+M2				  Near	 CSEG:014E
+M3				  Near	 CSEG:015B
+MAIN				  Far	 CSEG:0000
+MAX_MES				  Byte	 DSEG:9C40
+METKA_LOOP			  Near	 CSEG:0104
+MINUS_MAX_EL_MES		  Byte	 DSEG:9C93
+MIN_MES				  Byte	 DSEG:9C51
+MY_ARRAY			  Word	 DSEG:0000
+NEW_STRING			  Byte	 DSEG:9D4F
+NORM				  Near	 CSEG:0119
+NUMBER_CONVERT			  Near	 CSEG:0165
+NUMBER_MODULE			  Near	 CSEG:01A4
+OKEY				  Near	 CSEG:019F
+PREERROR			  Near	 CSEG:0198
+RUNSKIP				  Near	 CSEG:0056
+RUN_AWAY			  Near	 CSEG:00BB
+RUN_AWAY1			  Near	 CSEG:004C
+RUN_AWAY_SUMMA			  Near	 CSEG:0079
+SKIP				  Near	 CSEG:00F5
+SORT				  Near	 CSEG:00C5
+SORTED_MES			  Byte	 DSEG:9C62
+SORT_ARRAY			  Near	 CSEG:00BC
+STSDW_NO_SIGN			  Near	 CSEG:017B
+STSDW_OK			  Near	 CSEG:0194
+STSDW_PLUS			  Near	 CSEG:018F
+STUDW_ERROR			  Near	 CSEG:01D3
+STUDW_EXIT			  Near	 CSEG:01D6
+STUDW_LP			  Near	 CSEG:01B6
+SUMMA_ARRAY			  Near	 CSEG:00FB
+SUMMA_MES			  Byte	 DSEG:9C7A
+USERNUMBER			  Byte	 DSEG:9D59
+WRITE				  Near	 CSEG:0137
+WRITE_ARRAY			  Byte	 DSEG:9D10
+WRITE_MAX_ELEMENTS		  Byte	 DSEG:9CEE
+Turbo Assembler	 Version 4.0	    22/11/18 12:41:13	    Page 11
+Symbol Table
+
+
+
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+CSEG				  16  01DC Para	  Public  CODE
+DSEG				  16  9D60 Para	  Public  DATA
+STSEG				  16  0140 Para	  Stack	  STACK
+
